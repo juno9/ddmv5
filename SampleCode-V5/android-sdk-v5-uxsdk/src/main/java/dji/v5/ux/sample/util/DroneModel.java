@@ -185,7 +185,10 @@ public class DroneModel {
 
         msg_heartbeat msg = new msg_heartbeat();
         msg.type = MAV_TYPE.MAV_TYPE_QUADROTOR;
-        msg.autopilot = MAV_AUTOPILOT.MAV_AUTOPILOT_UDB; // MAV_AUTOPILOT_ARDUPILOTMEGA;  // 차후 dji로 수정하자.
+        msg.autopilot = MAV_AUTOPILOT.MAV_AUTOPILOT_UDB; // MAV_AUTOPILOT_ARDUPILOTMEGA;  // 차후 dji로 수정하자.// 이거 꼭 써야 함.
+//이 값은 드론 펌웨어마다 유형을 분기할 수 있는 값. 현재 DJI용으로 UDB를 쓰고 있다.
+
+
 
         // For base mode logic, see Copter::sendHeartBeat() in ArduCopter/GCS_Mavlink.cpp
         msg.base_mode = MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
@@ -195,137 +198,74 @@ public class DroneModel {
         //getFlightMode();
 
         switch (lastMode) {
-//            case MANUAL:
-//                msg.custom_mode = ArduCopterFlightModes.STABILIZE;
-//                break;
-//            case ATTI_HOVER:
-//                break;
-//            case HOVER:
-//                break;
-//            case GPS_BLAKE:
-//                break;
-//            case ATTI_LANDING:
-//                break;
-//            case CLICK_GO:
-//                break;
-//            case CINEMATIC:
-//                break;
-//            case ATTI_LIMITED:
-//                break;
-//            case PANO:
-//                break;
-//            case FARMING:
-//                break;
-//            case FPV:
-//                break;
-//            case PALM_CONTROL:
-//                break;
-//            case QUICK_SHOT:
-//                break;
-//            case DETOUR:
-//                break;
-//            case TIME_LAPSE:
-//                break;
-//            case POI2:
-//                break;
-//            case OMNI_MOVING:
-//                break;
-//            case ADSB_AVOIDING:
-//                break;
-//            case ATTI:
-//                msg.custom_mode = ArduCopterFlightModes.LOITER;
-//                break;
-//            case ATTI_COURSE_LOCK:
-//                break;
-//            case GPS_ATTI:
-//                msg.custom_mode = ArduCopterFlightModes.STABILIZE;
-//                break;
-//            case GPS_COURSE_LOCK:
-//                break;
-//            case GPS_HOME_LOCK:
-//                break;
-//            case GPS_HOT_POINT:
-//                break;
-//            case ASSISTED_TAKEOFF:
-//                break;
-//            case AUTO_TAKE_OFF:
-//                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case AUTO_LANDING:
-//                msg.custom_mode = ArduCopterFlightModes.LAND;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case GPS_WAYPOINT:
-//                msg.custom_mode = ArduCopterFlightModes.AUTO;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case GO_HOME:
-//                msg.custom_mode = ArduCopterFlightModes.RTL;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case JOYSTICK:
-//                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case GPS_ATTI_WRISTBAND:
-//                break;
-//            case DRAW:
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case GPS_FOLLOW_ME:
-//                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case ACTIVE_TRACK:
-//                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-//                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-//                break;
-//            case TAP_FLY:
-//                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-//                break;
-//            case GPS_SPORT:
-//                break;
-//            case GPS_NOVICE:
-//                break;
-//            case UNKNOWN:
-//                break;
-            case MANUAL: {
-                msg.custom_mode = ArduCopterFlightModes.STABILIZE;
+
+            case MANUAL: {//조종자가 직접 모든 것을 제어
+                msg.custom_mode = ArduCopterFlightModes.ACRO;//수동 바디 프레임 각 속도 및 수동 스로틀, 모든 요소 직접 컨트롤
                 break;
             }
-            case ATTI: {
-                msg.custom_mode = ArduCopterFlightModes.LOITER;
+            case ATTI: {//태도 안정화만 제공, 위치 유지 불가능
+                msg.custom_mode = ArduCopterFlightModes.ALT_HOLD;//고도를 유지하며 롤 피치 요 자동으로 유지, 자세는 유지 되지만 바람에 의해 흘러갈 수 있음
                 break;
             }
-            case GPS_NORMAL: {
+            case GPS_NORMAL: {//GPS와 비전 시스템으로 위치 설정
+                msg.custom_mode = ArduCopterFlightModes.LOITER;//자동 스로틀과 자동 수평 가속도, 자동으로 의치와 자세를 유지함, GPS사용
                 break;
             }
-            case POI: {
+            case GPS_SPORT: {//GPS와 비전 시스템으로 위치 설정, 정밀한 hovering 가능, 최대 속도 20m/s
+                msg.custom_mode = ArduCopterFlightModes.LOITER;//자동 스로틀과 자동 수평 가속도, 자동으로 의치와 자세를 유지함, GPS사용
                 break;
             }
-            case TAKE_OFF_READY: {
+            case GPS_TRIPOD: {//GPS와 비전 시스템으로 위치 설정, 비행 속도와 회전 감도 감소, 정밀한 촬영 가능
+                msg.custom_mode = ArduCopterFlightModes.LOITER;//자동 스로틀과 자동 수평 가속도, 자동으로 의치와 자세를 유지함, GPS사용
                 break;
             }
-            case AUTO_TAKE_OFF: {
-                msg.custom_mode = ArduCopterFlightModes.GUIDED;
+            case AUTO_LANDING: {//자동으로 착륙
+                msg.custom_mode = ArduCopterFlightModes.LAND;//수평 위치 제어를 사용하는 자동 착륙
                 msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
                 break;
             }
-            case AUTO_LANDING: {
-                msg.custom_mode = ArduCopterFlightModes.LAND;
+            case FORCE_LANDING: {//강제 착륙
+                msg.custom_mode = ArduCopterFlightModes.LAND;//수평 위치 제어를 사용하는 자동 착륙
                 msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
                 break;
             }
-            case WAYPOINT: {
-                break;
-            }
-            case GO_HOME: {
-                msg.custom_mode = ArduCopterFlightModes.RTL;
+            case GO_HOME: {//홈 포인트로 복귀
+                msg.custom_mode = ArduCopterFlightModes.RTL;//자동 이륙 지점으로 복귀
                 msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
                 break;
             }
-            case VIRTUAL_STICK: {
+            case WAYPOINT: {//경로 설정
+                msg.custom_mode = ArduCopterFlightModes.AUTO;//미션 명령을 사용하는 완전 자동 웨이포인트 제어
+                break;
+            }
+            case POI: {//관심 지점 설정
+                break;
+            }
+            case VIRTUAL_STICK: {//가상 조이스틱 사용
+                break;
+            }
+            case SMART_FLY: {//스마트 비행 기능 사용
+                break;
+            }
+            case AUTO_AVOIDANCE: {//자동 회피 기능 사용
+                break;
+            }
+            case APAS: {//고급 조종사 지원 시스템(Auto Pilot Assistance System) 사용
+                break;
+            }
+            case MOTOR_START:{//모터 시작
+                break;
+            }
+            case TAKE_OFF_READY: {//이륙 준비 완료
+                break;
+            }
+            case AUTO_TAKE_OFF: {//자동으로 이륙
+                msg.custom_mode = ArduCopterFlightModes.GUIDED;//즉시 명령을 사용하여 GCS로 좌표 또는 속도/방향으로 완전 자동 비행
+                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
+                break;
+            }
+            case TAP_FLY: {
+                msg.custom_mode = ArduCopterFlightModes.GUIDED;//즉시 명령을 사용하여 GCS로 좌표 또는 속도/방향으로 완전 자동 비행
                 break;
             }
             case SMART_FLIGHT: {
@@ -334,19 +274,13 @@ public class DroneModel {
             case PANO: {
                 break;
             }
-            case GPS_SPORT: {
+            case DRAW: {
+                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
                 break;
             }
-            case GPS_TRIPOD: {
-                break;
-            }
-            case AUTO_AVOIDANCE: {
-                break;
-            }
-            case SMART_FLY: {
-                break;
-            }
-            case FORCE_LANDING: {
+            case FOLLOW_ME: {
+                msg.custom_mode = ArduCopterFlightModes.GUIDED;//즉시 명령을 사용하여 GCS로 좌표 또는 속도/방향으로 완전 자동 비행
+                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
                 break;
             }
             case ATTI_LANDING: {
@@ -358,35 +292,16 @@ public class DroneModel {
             case CINEMATIC: {
                 break;
             }
-            case DRAW: {
-                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-                break;
-            }
-            case FOLLOW_ME: {
-                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-                msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_GUIDED_ENABLED;
-                break;
-            }
             case GPS_NOVICE: {
                 break;
             }
             case QUICK_MOVIE: {
                 break;
             }
-            case TAP_FLY: {
-                msg.custom_mode = ArduCopterFlightModes.GUIDED;
-                break;
-            }
             case MASTER_SHOT: {
                 break;
             }
-            case APAS: {
-                break;
-            }
             case TIME_LAPSE: {
-                break;
-            }
-            case MOTOR_START: {
                 break;
             }
             case UNKNOWN: {
