@@ -39,6 +39,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -192,7 +193,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private String mNewInbound = "";
     private String mNewDJI = "";
-
+    String id;
     private LiveStreamManager iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
     private CameraStreamManager iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
     //private DDMImageHandler mDDMImageHandler;
@@ -255,8 +256,12 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
 
         prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity.this);
+         id = prefs.getString("pref_drone_id", "10000");
+
 
         mModel = new DroneModel(this);
+        mModel.setSystemId(Integer.parseInt(id));
+
         mReceiver = new MAVLinkReceiver(this, mModel);
         mGCSCommunicator = new GCSCommunicatorAsyncTask(this);
         mGCSCommunicator.execute();
@@ -588,7 +593,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            mainActivityWeakReference.get().mModel.tick();
+            if (mainActivityWeakReference.get().mModel == null) {
+            } else {
+                mainActivityWeakReference.get().mModel.tick();
+            }
         }
     }
 
@@ -617,6 +625,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
 
         @Override
+
         protected Integer doInBackground(Integer... ints2) {
             Log.d("RDTHREADS", "doInBackground()");
 
@@ -650,19 +659,17 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                         }
 
                         if (mainActivityWeakReference.get().connectivityHasChanged) {
-
                             if (mainActivityWeakReference.get().shouldConnect) {
                                 final Drawable connectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_baseline_connected_24px, null);
-
                                 mainActivityWeakReference.get().runOnUiThread(() -> {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-
                                     //RTMP 스트리밍 기능 추가
                                     List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();
                                     mainActivityWeakReference.get().Log("비디오 리스트" + list.toString());
-                                    String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone5.stream";
+
+                                    String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone" +mainActivityWeakReference.get().id + ".stream";
                                     LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()
                                             .setLiveStreamType(LiveStreamType.RTMP)
                                             .setRtmpSettings(new RtmpSettings.Builder()
@@ -992,5 +999,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
     public void Log(String input) {
         Log.i(TAG, input);
+    }
+
+    public void toast(String input) {
+        Toast.makeText(getApplicationContext(), input, Toast.LENGTH_SHORT).show();
     }
 }

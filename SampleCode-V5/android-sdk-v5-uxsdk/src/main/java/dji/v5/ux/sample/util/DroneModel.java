@@ -140,7 +140,7 @@ public class DroneModel {
         return (float) mAlt;
     }
 
-    void setSystemId(int id) {
+    public void setSystemId(int id) {
         mSystemId = id;
     }
 
@@ -440,7 +440,7 @@ public class DroneModel {
     private void send_altitude() {
         //  //parent.Log("send_altitude %2% ");
         msg_altitude msg = new msg_altitude();
-        msg.altitude_relative = (int) (mAlt * 1000);
+        msg.altitude_relative = (int) (mAlt);
         mAlt = msg.altitude_relative;
         sendMessage(msg);
     }
@@ -503,7 +503,7 @@ public class DroneModel {
         // but DJI reports altitude above home point.
         // Mavlink: Millimeters above ground (unspecified: presumably above home point?)
         // DJI: relative altitude of the aircraft relative to take off location, measured by barometer, in meters.
-        msg.relative_alt = (int) (mAlt * 1000);
+        msg.relative_alt = (int) (mAlt);
 
         //        Log.d(TAG, "msg_global_position_int :: ALT :: " +  String.valueOf(msg.relative_alt/1000) + " origin :" + String.valueOf(coord.getAltitude()) );
 
@@ -1261,7 +1261,8 @@ public class DroneModel {
                     mLatitude = newValue.getLatitude();
                     mLongitude = newValue.getLongitude();
                     mAlt = newValue.getAltitude();
-                    parent.Log("listen3DLocation()  %1% LAT: " + mLatitude + " " + "%2% LON: " + mLongitude + " " + "%3% ALT: " + mAlt);
+
+                  //  parent.toast("LAT: " + mLatitude + " " + "LON: " + mLongitude + " " +"ALT: " + mAlt);
                 }
             }
         });
@@ -1360,6 +1361,7 @@ public class DroneModel {
                     mRoll = t1.getRoll();
                     mYaw = t1.getYaw();
                     parent.Log(" %13% listenAttitude() pitch: " + mPitch + " " + " %14% roll: " + mRoll + " " + " %15% yaw: " + mYaw);
+
                 }
             }
         });
@@ -1650,7 +1652,7 @@ public class DroneModel {
     //드론으로부터 받아오는 값
 
     //DDM에서 생성, 지정하는 값
-    private int mSystemId = 5;//시스템 ID
+    public int mSystemId = 3;//시스템 ID
     public WaypointMission mactiveWaypointMission = null;//웨이포인트 미션
     public Waypoint waypoint = null;
 
