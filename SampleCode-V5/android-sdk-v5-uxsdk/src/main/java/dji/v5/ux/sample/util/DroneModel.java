@@ -107,8 +107,12 @@ import io.reactivex.rxjava3.core.Flowable;
 
 public class DroneModel {
     private static final int NOT_USING_GCS_COMMANDED_MODE = -1;
-
+    /*
+    *드론 모델 객체가 초기화 되자 마자 listen메소드들을 실행하여 기체로부터 값들을 받아옴
+    *이 값들은 변경될 때마다 0.2초 주기로 변경된 값들을 받아 이 클래스 내의 전역변수로 선언되어 있는 값들을 갱신 함
+    */
     public DroneModel(DefaultLayoutActivity defaultLayoutActivity) {
+
         this.parent = defaultLayoutActivity;
         listenIsMotorOn();
         listenIsFly();
@@ -1096,6 +1100,12 @@ public class DroneModel {
         return params;
     }
 
+
+    /*
+
+
+
+     */
     public void tick() { // Called ever 100ms...
         ticks += 100;
         try {

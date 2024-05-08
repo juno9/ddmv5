@@ -642,7 +642,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 while (!isCancelled()) {
                     // Listen for packets
                     try {
-                        if (request_renew_datalinks) {
+                        if (request_renew_datalinks) {//최초 실행시 이 조건문이 작동
                             request_renew_datalinks = false;
                             onRenewDatalinks();
                         }
@@ -660,24 +660,26 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
                         if (mainActivityWeakReference.get().connectivityHasChanged) {
                             if (mainActivityWeakReference.get().shouldConnect) {
-                                final Drawable connectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_baseline_connected_24px, null);
+                                final Drawable connectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_baseline_connected_24px, null);//연결 완료 UI 표시
                                 mainActivityWeakReference.get().runOnUiThread(() -> {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
                                     //RTMP 스트리밍 기능 추가
-                                    List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();
+                                    List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록 먼저 확인
                                     mainActivityWeakReference.get().Log("비디오 리스트" + list.toString());
 
                                     String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone" +mainActivityWeakReference.get().id + ".stream";
-                                    LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()
+                                    LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
                                             .setLiveStreamType(LiveStreamType.RTMP)
                                             .setRtmpSettings(new RtmpSettings.Builder()
                                                     .setUrl(rtmpUrl)
                                                     .build()
                                             ).build();
+
                                     mainActivityWeakReference.get().iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
-                                    mainActivityWeakReference.get().iLiveStreamManager.setCameraIndex(list.get(0).getPosition());
+
+                                    mainActivityWeakReference.get().iLiveStreamManager.setCameraIndex(list.get(0).getPosition());//사용 가능한 카메라 목록에서 가장 먼저 잡히는 카메라에서 찍는 영상을 송출하도록 세팅
                                     mainActivityWeakReference.get().iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
                                         @Override
                                         public void onSuccess() {
@@ -689,9 +691,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                             mainActivityWeakReference.get().Log("스트리밍 못함");
                                         }
                                     });
-                                    //RTMP 스트리밍 기능 추가
 
-                                });
+
+                                });//RTMP 스트리밍 기능 추가
+                                //라이브스트림 매니저는 setquality, setbitrate등의 메소드를 제공
                             } else {
                                 final Drawable disconnectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_outline_disconnected_24px, null);
 
@@ -729,6 +732,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 //                                        AsyncReadContextThread asyncContextThread = new AsyncReadContextThread(this.tcpWorkerLink
 //                                                , packet
 //                                                , addressTable);
+
 //                                        //log.info("[--AsyncReadContextThread--] :: accept tcp Data...");
 //                                        Thread thread = new Thread(asyncContextThread, "AsyncReadContextThread");
 //                                        thread.start(); // async
@@ -820,7 +824,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         }
 
-        private void createTelemfetryTcpOutSocket() {
+        private void createTelemfetryTcpOutSocket() {// GCS와 연결하는 부분
             close();
 
             String gcsIPString = "223.130.163.167";
@@ -829,8 +833,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 //                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
 //
 //            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
-            gcsIPString = "223.130.163.167"; //"220.79.19.247";
-            int telemIPPort = 6760;
+            gcsIPString = "223.130.163.167"; //"220.79.19.247";// 현재 GCS IP 주소 하드코딩으로 입력해 둔 상태
+            int telemIPPort = 6760;// 현재 GCS PORT 하드코딩으로 입력해 둔 상태
+
             Log.d(TAG, "gcsIPString :: Host-IP:" + gcsIPString + "HostPort:" + telemIPPort);
 
 
