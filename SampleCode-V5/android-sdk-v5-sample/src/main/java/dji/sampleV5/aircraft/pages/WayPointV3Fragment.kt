@@ -141,7 +141,6 @@ class WayPointV3Fragment : DJIFragment() {
     }
 
     private fun prepareMissionData() {
-
         val dir = File(rootDir)
         if (!dir.exists()) {
             dir.mkdirs()
@@ -168,10 +167,10 @@ class WayPointV3Fragment : DJIFragment() {
         sp_map_switch.adapter = wayPointV3VM.getMapSpinnerAdapter()
 
         addListener()
-        btn_mission_upload?.setOnClickListener {
-            val waypointFile = File(curMissionPath)
-            if (waypointFile.exists()) {
-                wayPointV3VM.pushKMZFileToAircraft(curMissionPath)
+        btn_mission_upload?.setOnClickListener {//uploadKmz 버튼 클릭 리스너 정의
+            val waypointFile = File(curMissionPath)//생성해 둔 KMZ파일을 불러옴
+            if (waypointFile.exists()) {//파일이 존재한다면
+                wayPointV3VM.pushKMZFileToAircraft(curMissionPath)//드론 기체에 KMZ파일을 전달함
             } else {
                 ToastUtils.showToast("Mission file not found!");
             }
@@ -196,8 +195,8 @@ class WayPointV3Fragment : DJIFragment() {
         }
 
 
-        btn_mission_start.setOnClickListener {
-            wayPointV3VM.startMission(
+        btn_mission_start.setOnClickListener {//업로드되어 있는 KMZ 미션을 시작함
+            wayPointV3VM.startMission(//미션 시작
                 FileUtils.getFileName(curMissionPath, WAYPOINT_FILE_TAG),
                 selectWaylines,
                 object : CommonCallbacks.CompletionCallback {
@@ -276,15 +275,15 @@ class WayPointV3Fragment : DJIFragment() {
             updateSaveBtn()
         }
 
-        kmz_save.setOnClickListener {
+        kmz_save.setOnClickListener {//kmz파일 저장 및 생성 버튼
             val kmzOutPath = rootDir + "generate_test.kmz"
-            val waylineMission: WaylineMission = createWaylineMission()
-            val missionConfig: WaylineMissionConfig = KMZTestUtil.createMissionConfig()
-            val template: Template = KMZTestUtil.createTemplate(showWaypoints)
+            val waylineMission: WaylineMission = createWaylineMission()//웨이라인 미션 생성
+            val missionConfig: WaylineMissionConfig = KMZTestUtil.createMissionConfig()//
+            val template: Template = KMZTestUtil.createTemplate(showWaypoints)//웨이포인트가 들어있는 어레이리스트를 매개변수로 템플릿을 생성함
             WPMZManager.getInstance()
-                .generateKMZFile(kmzOutPath, waylineMission, missionConfig, template)
+                .generateKMZFile(kmzOutPath, waylineMission, missionConfig, template)//KMZ파일 생성
             curMissionPath  = kmzOutPath
-            ToastUtils.showToast("Save Kmz Success Path is : $kmzOutPath")
+            ToastUtils.showToast("Save Kmz Success Path is : $kmzOutPath")//생성된 KMZ파일의 경로를 토스트로 표시함
 
             waypoint_add.isChecked = false;
         }
@@ -305,13 +304,31 @@ class WayPointV3Fragment : DJIFragment() {
 
             })
         }
-
         addMapListener()
-
         createMapView(savedInstanceState)
         observeAircraftLocation()
     }
-
+    private  fun addMapListener(){
+        waypoint_add.setOnCheckedChangeListener { _, isOpen ->//맵 위의 한 지점을 터치하면 웨이포인트를 생성할지 아무런 동작을 하지 않을지 선택하는 토글이 있다. 그 토글의 값이 true 일 때 map의 온터치 리스너가 작동하도록 하는 조건문
+            if (isOpen) {//맵 위의 한 지점을 터치하면 이 메소드가 작동한다.
+                map_widget.map?.setOnMapClickListener{
+                    showWaypointDlg(it , object :CommonCallbacks.CompletionCallbackWithParam<WaypointInfoModel>{//웨이포인트를 생성하는 다이얼로그를 띄움, 콜백 메소드도 여기서 정의
+                    override fun onSuccess(waypointInfoModel: WaypointInfoModel) {//웨이포인트를 추가하면
+                        showWaypoints.add( waypointInfoModel)//웨이포인트 정보를 어레이리스트에 추가 함
+                        showWaypoints()//지도상에 웨이포인트 지점을 표시
+                        updateSaveBtn()//웨이포인트들이 들어있는 어레이리스트가 비어있지 않다면 save버튼을 활성화 한다
+                        ToastUtils.showToast("lat" + it.latitude + " lng" + it.longitude)//추가한 웨이포인트의 LAT,LAN 값을 토스트로 표시해 줌
+                    }
+                        override fun onFailure(error: IDJIError) {
+                            ToastUtils.showToast("add Failed " )//추가하지 못했을 때는 add Failed라는 문구를 토스트로 띄워줌
+                        }
+                    })
+                }
+            } else {
+                map_widget.map?.removeAllOnMapClickListener()
+            }
+        }
+    }
     private fun observeAircraftLocation() {
         val location = KeyManager.getInstance()
             .getValue(KeyTools.createKey(FlightControllerKey.KeyAircraftLocation), LocationCoordinate2D(0.0,0.0))
@@ -371,28 +388,7 @@ class WayPointV3Fragment : DJIFragment() {
         })
     }
 
-    private  fun addMapListener(){
 
-        waypoint_add.setOnCheckedChangeListener { _, isOpen ->
-            if (isOpen) {
-                map_widget.map?.setOnMapClickListener{
-                    showWaypointDlg(it , object :CommonCallbacks.CompletionCallbackWithParam<WaypointInfoModel>{
-                        override fun onSuccess(waypointInfoModel: WaypointInfoModel) {
-                            showWaypoints.add( waypointInfoModel)
-                            showWaypoints()
-                            updateSaveBtn()
-                            ToastUtils.showToast("lat" + it.latitude + " lng" + it.longitude)
-                        }
-                        override fun onFailure(error: IDJIError) {
-                            ToastUtils.showToast("add Failed " )
-                        }
-                    })
-                }
-            } else {
-                map_widget.map?.removeAllOnMapClickListener()
-            }
-        }
-    }
 
     private fun addListener(){
         wayPointV3VM.addMissionStateListener() {
