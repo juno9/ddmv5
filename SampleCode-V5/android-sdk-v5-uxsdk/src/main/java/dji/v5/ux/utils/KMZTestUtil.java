@@ -1,4 +1,4 @@
-package dji.sampleV5.aircraft.utils;
+package dji.v5.ux.utils;
 
 import static dji.sdk.wpmz.value.mission.WaylineWaypointTurnMode.TO_POINT_AND_STOP_WITH_DISCONTINUITY_CURVATURE;
 
@@ -8,7 +8,7 @@ import com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType;
 import java.util.ArrayList;
 import java.util.List;
 
-import dji.sampleV5.aircraft.utils.wpml.WaypointInfoModel;
+
 import dji.sdk.wpmz.value.mission.ActionGimbalRotateParam;
 import dji.sdk.wpmz.value.mission.ActionStartRecordParam;
 import dji.sdk.wpmz.value.mission.ActionStopRecordParam;
@@ -40,6 +40,7 @@ import dji.sdk.wpmz.value.mission.WaylineWaypoint;
 import dji.sdk.wpmz.value.mission.WaylineWaypointPitchMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawParam;
+import dji.v5.ux.utils.wpml.WaypointInfoModel;
 
 /**
  * @author feel.feng
@@ -61,7 +62,7 @@ public class KMZTestUtil {
     public static final WaylineAltitudeMode DEF_ALTITUDE_MODE = WaylineAltitudeMode.RELATIVE_TO_START_POINT;
     public static final Double DEF_PITCH_ANGLE = -30d;
 
-    private KMZTestUtil(){}
+    public KMZTestUtil(){}
 
     public static WaylineMission createWaylineMission(){
         WaylineMission waylineMission = new WaylineMission();
@@ -69,6 +70,7 @@ public class KMZTestUtil {
         waylineMission.setUpdateTime(((Long)System.currentTimeMillis()).doubleValue());
         return waylineMission;
     }
+
     public static WaylineMissionConfig createMissionConfig(){
         WaylineMissionConfig config = new WaylineMissionConfig();
         config.setFlyToWaylineMode(DEF_WAYLINE_MODE);
@@ -84,6 +86,7 @@ public class KMZTestUtil {
         config.setPayloadInfo(payloadInfos);
         return config;
     }
+
     public static Template createTemplate(List<WaypointInfoModel> waypointInfoModels){
         Template template = new Template();
         WaylineTemplateWaypointInfo waypointInfo = createTemplateWaypointInfo(waypointInfoModels);
@@ -95,22 +98,7 @@ public class KMZTestUtil {
         template.setPayloadParam(new ArrayList<>());
         return template;
     }
-    public static WaylineActionInfo createActionInfo(WaypointActionType actionType) {
 
-        switch (actionType) {
-            case START_TAKE_PHOTO:
-                return transTakePhoto();
-            case START_RECORD:
-                return transStartRecord();
-            case STOP_RECORD:
-                return transStopRecord();
-            case GIMBAL_PITCH:
-                return transGimbalPitch();
-            default:
-                return null;
-
-        }
-    }
     public static  WaylineCoordinateParam transCoordinateParamFrom() {
         WaylineCoordinateParam coordinateParam = new WaylineCoordinateParam();
         coordinateParam.setCoordinateMode(DEF_COR_MODE);
@@ -119,6 +107,8 @@ public class KMZTestUtil {
         coordinateParam.setAltitudeMode(DEF_ALTITUDE_MODE);
         return coordinateParam;
     }
+
+
     public static  WaylineTemplateWaypointInfo createTemplateWaypointInfo(List<WaypointInfoModel> waypointInfoModels) {
         List<WaylineWaypoint> waypoints = new ArrayList<>();
         for (WaypointInfoModel infoModel:waypointInfoModels){
@@ -141,7 +131,6 @@ public class KMZTestUtil {
 
         return waypointInfo;
     }
-
 
 
     public static  List<WaylineActionGroup> transformActionsFrom(List<WaypointInfoModel> waypointInfoModels) {
@@ -193,6 +182,24 @@ public class KMZTestUtil {
 
         return actionGroups;
     }
+
+    public static WaylineActionInfo createActionInfo(WaypointActionType actionType) {
+
+        switch (actionType) {
+            case START_TAKE_PHOTO:
+                return transTakePhoto();
+            case START_RECORD:
+                return transStartRecord();
+            case STOP_RECORD:
+                return transStopRecord();
+            case GIMBAL_PITCH:
+                return transGimbalPitch();
+            default:
+                return null;
+
+        }
+    }
+
     private static WaylineActionInfo transGimbalPitch() {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.GIMBAL_ROTATE);
@@ -205,6 +212,7 @@ public class KMZTestUtil {
         info.setGimbalRotateParam(param);
         return info;
     }
+
     public static WaylineActionInfo transTakePhoto() {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.TAKE_PHOTO);
@@ -216,6 +224,7 @@ public class KMZTestUtil {
         info.setTakePhotoParam(param);
         return info;
     }
+
     private static WaylineActionInfo transStartRecord() {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.START_RECORD);
@@ -226,6 +235,7 @@ public class KMZTestUtil {
         info.setStartRecordParam(param);
         return info;
     }
+
     private static WaylineActionInfo transStopRecord() {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.STOP_RECORD);
@@ -234,4 +244,5 @@ public class KMZTestUtil {
         info.setStopRecordParam(param);
         return info;
     }
+
 }

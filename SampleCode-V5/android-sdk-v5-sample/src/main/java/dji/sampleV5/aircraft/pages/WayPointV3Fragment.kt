@@ -822,36 +822,36 @@ class WayPointV3Fragment : DJIFragment() {
     }
 
     fun getCurWaypointIndex():Int{
-        if (showWaypoints.size <= 0) {
-            return 0
+        if (showWaypoints.size <= 0) {//웨이포인트 목록이 비어있으면
+            return 0 //0을 리턴
         }
-        return showWaypoints.size
+        return showWaypoints.size //웨이포인트 목록이 비어있지 않으면 현재 웨이포인트갯수가 몇개인지를 리턴함
     }
-    private fun showWaypointDlg( djiLatLng: DJILatLng ,callbacks: CommonCallbacks.CompletionCallbackWithParam<WaypointInfoModel>) {
+    private fun  showWaypointDlg( djiLatLng: DJILatLng ,callbacks: CommonCallbacks.CompletionCallbackWithParam<WaypointInfoModel>) {//웨이포인트 추가 다이얼로그, mavlink통신에서는 이게 핵심이 될 듯.
         val builder = AlertDialog.Builder(requireActivity())
         val dialog = builder.create()
         val dialogView = View.inflate(requireActivity(), R.layout.dialog_add_waypoint, null)
         dialog.setView(dialogView)
 
-        val etHeight = dialogView.findViewById<View>(R.id.et_height) as EditText
+        val etHeight = dialogView.findViewById<View>(R.id.et_height) as EditText //  alt값
         val etSpd = dialogView.findViewById<View>(R.id.et_speed) as EditText
         val viewActionType = dialogView.findViewById<View>(R.id.action_type) as DescSpinnerCell
-        val btnLogin = dialogView.findViewById<View>(R.id.btn_add) as Button
+        val btnAdd = dialogView.findViewById<View>(R.id.btn_add) as Button
         val btnCancel = dialogView.findViewById<View>(R.id.btn_cancel) as Button
 
-        btnLogin.setOnClickListener {
-            var waypointInfoModel =  WaypointInfoModel()
-            val waypoint = WaylineWaypoint()
-            waypoint.waypointIndex = getCurWaypointIndex()
-            val location = WaylineLocationCoordinate2D(djiLatLng.latitude , djiLatLng.longitude)
-            waypoint.location = location
-            waypoint.height = etHeight.text.toString().toDouble()
+        btnAdd.setOnClickListener {
+            var waypointInfoModel =  WaypointInfoModel()//매개변수로 전달받은 waypointInfoModel 변수로 선언
+            val waypoint = WaylineWaypoint() //빈 웨이포인트 하나 생성
+            waypoint.waypointIndex = getCurWaypointIndex()// 웨이포인트의 총 갯수를 리턴- 지금 구조는 하나씩 추가하는 구조라 가능하지만 mavlink 통신을 할 때는 메시지에서 전달받은 seq값을 넣으면 될듯
+            val location = WaylineLocationCoordinate2D(djiLatLng.latitude , djiLatLng.longitude) //lat, lang 값을 받아서 넣으면 될듯
+            waypoint.location = location//메시지로 전달받은 lat, lang 값을 활용하여 위경도 설정
+            waypoint.height = etHeight.text.toString().toDouble() //  alt값을 활용하여 고도값 설정
             // 根据坐标类型，如果为egm96 需要加上高程差
             waypoint.ellipsoidHeight = etHeight.text.toString().toDouble()
             waypoint.speed = etSpd.text.toString().toDouble()
             waypoint.useGlobalTurnParam = true
-            waypointInfoModel.waylineWaypoint = waypoint
-            val actionInfos: MutableList<WaylineActionInfo> = ArrayList()
+            waypointInfoModel.waylineWaypoint = waypoint //웨이포인트인포 모델 객체의 웨이라인 웨이포인트 변수에 위에서 생성한 웨이라인웨이포인트를 할당함
+            val actionInfos: MutableList<WaylineActionInfo> = ArrayList()//웨이라인 액션들을 담은 어레이 리스트 하나 생성
             actionInfos.add(KMZTestUtil.createActionInfo(getCurActionType(viewActionType)))
             waypointInfoModel.waylineWaypoint = waypoint
             waypointInfoModel.actionInfos = actionInfos

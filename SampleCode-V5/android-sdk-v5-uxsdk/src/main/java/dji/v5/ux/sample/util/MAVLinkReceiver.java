@@ -1,5 +1,6 @@
 package dji.v5.ux.sample.util;
 
+import static dji.sdk.wpmz.value.mission.WaylineWaypointTurnMode.TO_POINT_AND_STOP_WITH_DISCONTINUITY_CURVATURE;
 import static dji.v5.ux.MAVLink.ardupilotmega.msg_autopilot_version_request.MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST;
 
 import static dji.v5.ux.MAVLink.common.msg_command_int.MAVLINK_MSG_ID_COMMAND_INT;
@@ -42,10 +43,19 @@ import static dji.v5.ux.MAVLink.enums.MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
 import static dji.v5.ux.MAVLink.ardupilotmega.msg_autopilot_version_request.MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST;
 import static dji.v5.ux.MAVLink.common.msg_heartbeat.MAVLINK_MSG_ID_HEARTBEAT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
+import static dji.v5.ux.utils.KMZTestUtil.DEF_GLOBAL_FLIGHT_HEIGHT;
+import static dji.v5.ux.utils.KMZTestUtil.transformActionsFrom;
 
 
 import android.util.Log;
 
+import com.dji.wpmzsdk.common.data.Template;
+
+import dji.sdk.wpmz.value.mission.WaylineTemplateWaypointInfo;
+import dji.sdk.wpmz.value.mission.WaylineWaypoint;
+import dji.sdk.wpmz.value.mission.WaylineWaypointPitchMode;
+import dji.sdk.wpmz.value.mission.WaylineWaypointYawMode;
+import dji.sdk.wpmz.value.mission.WaylineWaypointYawParam;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.ux.MAVLink.Messages.MAVLinkMessage;
 import dji.v5.ux.MAVLink.common.msg_command_long;
@@ -66,6 +76,7 @@ import dji.v5.ux.MAVLink.enums.MAV_RESULT;
 import dji.v5.ux.MAVLink.enums.MAV_TYPE;
 
 import java.util.ArrayList;
+import java.util.List;
 //import static sq.rogue.rosettadrone.util.TYPE_WAYPOINT_DISTANCE;
 //import static sq.rogue.rosettadrone.util.TYPE_WAYPOINT_MAX_ALTITUDE;
 //import static sq.rogue.rosettadrone.util.TYPE_WAYPOINT_MAX_SPEED;
@@ -83,6 +94,8 @@ import java.util.ArrayList;
 //import dji.common.mission.waypoint.WaypointMissionState;
 
 import dji.v5.ux.sample.showcase.defaultlayout.DefaultLayoutActivity;
+import dji.v5.ux.utils.KMZTestUtil;
+import dji.v5.ux.utils.wpml.WaypointInfoModel;
 
 public class MAVLinkReceiver {
     private static final int MAV_MISSION_ACCEPTED = 0;
@@ -91,6 +104,7 @@ public class MAVLinkReceiver {
     private float m_autoFlightSpeed = 2.0f;
     private float m_maxFlightSpeed = 5.0f;
 
+    private KMZTestUtil kmzTestUtil = new KMZTestUtil();
 
     private final int WP_STATE_INACTIVE = 0;
     private final int WP_STATE_REQ_COUNT = 1;
@@ -107,6 +121,7 @@ public class MAVLinkReceiver {
     private ArrayList<msg_mission_item_int> mMissionItemList;
     private boolean isHome = true;
 
+
     public MAVLinkReceiver(DefaultLayoutActivity parent, DroneModel model) {
         this.parent = parent;
         this.mModel = model;
@@ -115,11 +130,11 @@ public class MAVLinkReceiver {
     public void process(MAVLinkMessage msg) {
 
 
-        WaypointMissionManager WPMmanager=WaypointMissionManager.getInstance();
+        WaypointMissionManager WPMmanager = WaypointMissionManager.getInstance();
 
         // IS 0 is hart beat...
         if (msg.msgid != 0) {
-           // Log.d(TAG, msg.toString());
+            // Log.d(TAG, msg.toString());
         }
 
         switch (msg.msgid) {
@@ -132,8 +147,8 @@ public class MAVLinkReceiver {
             case MAVLINK_MSG_ID_HEARTBEAT:
                 Log.d(TAG, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAVLINK_MSG_ID_HEARTBEAT FROM DROW <<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
                 this.mTimeStampLastGCSHeartbeat = System.currentTimeMillis();
-                msg_heartbeat heartbeatMsg = (msg_heartbeat)msg;
-                switch(heartbeatMsg.type) {
+                msg_heartbeat heartbeatMsg = (msg_heartbeat) msg;
+                switch (heartbeatMsg.type) {
                     case MAV_TYPE.MAV_TYPE_GCS:
                     case MAV_TYPE.MAV_TYPE_GIMBAL:
                     case MAV_TYPE.MAV_TYPE_ADSB:
@@ -160,8 +175,7 @@ public class MAVLinkReceiver {
 //                    return;
 //                }
 
-                switch (msg_cmd.command)
-                {
+                switch (msg_cmd.command) {
 //                    case MAV_CMD_COMPONENT_ARM_DISARM:
 //                        if (msg_cmd.param1 == 1)
 //                            mModel.armMotors();
@@ -243,7 +257,7 @@ public class MAVLinkReceiver {
                     case MAV_CMD_DO_SET_SERVO:
 //                        mModel.do_set_Gimbal(msg_cmd.param1, msg_cmd.param2);
 //                        break;
-                    // JUMP is just a test function to enter the Timeline...
+                        // JUMP is just a test function to enter the Timeline...
                     case MAV_CMD_DO_JUMP:
                         Log.d(TAG, "Start Timeline...");
                         //    mModel.echoLoadedMission();
@@ -262,9 +276,9 @@ public class MAVLinkReceiver {
 //                changeFlightMode((int) msg_set_mode.custom_mode);
 //                break;
 
-            /**************************************************************
-             * These messages are used when GCS sends Velocity commands   *
-             **************************************************************/
+                /**************************************************************
+                 * These messages are used when GCS sends Velocity commands   *
+                 **************************************************************/
 //            case MAVLINK_MSG_ID_SET_POSITION_TARGET_LOCAL_NED:
 //                msg_set_position_target_local_ned msg_param = (msg_set_position_target_local_ned) msg;
 //                if (((msg_param.type_mask & 0b0000100000000111) == 0x007)) {  // If no move and we use yaw rate...
@@ -311,7 +325,7 @@ public class MAVLinkReceiver {
 //                }
 //                break;
 
-            // This command must be sent at 1Hz minimum...
+                // This command must be sent at 1Hz minimum...
 //            case MAVLINK_MSG_ID_MANUAL_CONTROL:
 //                msg_manual_control msg_param_5 = (msg_manual_control) msg;
 //
@@ -326,9 +340,9 @@ public class MAVLinkReceiver {
 //                break;
 
 
-            /**************************************************************
-             * These messages are used when GCS requests params from MAV  *
-             **************************************************************/
+                /**************************************************************
+                 * These messages are used when GCS requests params from MAV  *
+                 **************************************************************/
 
             case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
                 mModel.send_all_params();
@@ -389,72 +403,57 @@ public class MAVLinkReceiver {
              **************************************************************/
 
             // Start load new mission... ddm이 대신 수행.
-//            case MAVLINK_MSG_ID_MISSION_COUNT:
-//
-//                // Is this message to this system...
-//                msg_mission_count msg_count = (msg_mission_count) msg;
-//                if (mModel.getSystemId() != msg_count.target_system) {
-//                    return;
-//                }
-//
-//                // Flush old mission...
-//                if (mModel.getWaypointMissionOperator().getLoadedMission() != null) {
-//                    mModel.getWaypointMissionOperator().getLoadedMission().getWaypointList().clear();
-//                }
-//
-//                // Generate new empty mission...
-//                generateNewMission();
-//
-//                // Get the expected counter...
-//                Log.d(TAG, "Expect: Mission Counter: " + msg_count.count);
-//                mNumGCSWaypoints = msg_count.count;
-//                wpState = WP_STATE_REQ_WP;
-//                mMissionItemList = new ArrayList<msg_mission_item_int>();
-//
-//                // Request first mission ithem...
-//                Log.d(TAG, "Mission REQ: 0...");
-//                mModel.request_mission_item(0);
-//                // 차후, 연결링크 혼잡이나 손실되었을 경우 GCS에서 받지못할면 rqeust 타임아웃이 DROW에 있지만,
-//                // DDM에서 Firmware 역할하도록 reqeust에 따른 item/itemint의 timer가 필요함.
-//                break;
+            case MAVLINK_MSG_ID_MISSION_COUNT:
 
-//            case MAVLINK_MSG_ID_MISSION_ITEM_INT:  // 0x73
-//            {
-//                // Is this message to this system...
-//                msg_mission_item_int msg_item = (msg_mission_item_int) msg;
-//                Log.d(TAG, "Add mission: " + msg_item.seq);
-//
-//                if (mModel.getSystemId() != msg_item.target_system) {
-//                    break;
-//                }
-//                Log.d(TAG, "To this system... ");
-//
-//                // Somehow the GOTO from QGroundControl does not issue a mission count...
-//                if (mMissionItemList == null && msg_item.command == MAV_CMD_NAV_WAYPOINT) {
-//                    Log.d(TAG, "Goto... ");
-//                    mModel.goto_position(msg_item.x/10000000.0, msg_item.y/10000000.0, msg_item.z, 0);
-//                    mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_ACCEPTED);
-//                }
-//                else {
-//                    if (mMissionItemList == null) {
-//                        Log.d(TAG, "Error Sequence error!");
-//                        mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);
-//                    }
-//                    else {
-//                        mMissionItemList.add(msg_item);
-//
-//                        // We are done fetching a complete mission from the GCS...
-//                        if (msg_item.seq == mNumGCSWaypoints - 1) {
-//                            wpState = WP_STATE_INACTIVE;
-//                            finalizeNewMission();
-//                        } else {
-//                            Log.d(TAG, "Mission REQ: " +msg_item.seq + 1);
-//                            mModel.request_mission_item((msg_item.seq + 1));
-//                        }
-//                    }
-//                }
-//            }
-//            break;
+                //최초 GCS에서 나 이제 너한테 웨이포인트 몇개 줄게 를 먼저 메시지로 전달함
+                msg_mission_count msg_count = (msg_mission_count) msg;
+                if (mModel.getSystemId() != msg_count.target_system) {
+                    return;
+                }
+
+
+                generateNewMission();//카운트를 최초 수신하고 나면 빈 미션을 하나 만들어 줘야
+                Log.d(TAG, "Expect: Mission Counter: " + msg_count.count);
+
+                mNumGCSWaypoints = msg_count.count;//받을 아이템 갯수 먼저 마브링크 리시버 내에 저장
+                wpState = WP_STATE_REQ_WP;//현재 웨이포인트 관련 진행상황 저장
+                mMissionItemList = new ArrayList<msg_mission_item_int>();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
+
+
+                Log.d(TAG, "Mission REQ: 0...");
+                mModel.request_mission_item(0);//카운트 수신했으니 0번 아이템 요청
+                // 차후, 연결링크 혼잡이나 손실되었을 경우 GCS에서 받지못할면 rqeust 타임아웃이 DROW에 있지만,
+                // DDM에서 Firmware 역할하도록 reqeust에 따른 item/itemint의 timer가 필요함.
+                break;
+
+            case MAVLINK_MSG_ID_MISSION_ITEM_INT:  // 0x73
+            {
+
+                msg_mission_item_int msg_item = (msg_mission_item_int) msg;//수신한 메시지 item 메시지 로 변환
+                Log.d(TAG, "Add mission: " + msg_item.seq);
+
+                if (mModel.getSystemId() != msg_item.target_system) {//메시지의 타겟이 이 드론이 맞는지 먼저 확인, 아니라면 바로 조건문 탈출
+                    break;
+                }
+
+                if (mMissionItemList == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
+                    Log.d(TAG, "Error Sequence error!");
+                    mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);//gcs에 ACk전송
+                } else {
+                    mMissionItemList.add(msg_item);//아이템을 리스트에 담음
+
+
+                    if (msg_item.seq == mNumGCSWaypoints - 1) {// seq값이 (count-1) 과 같다면 == 마지막 아이템이라면
+                        wpState = WP_STATE_INACTIVE;
+                        finalizeNewMission();
+                    } else {//마지막 아이템이 아니라면
+                        Log.d(TAG, "Mission REQ: " + msg_item.seq + 1);// 받은 아이템의 seq+1 번째 아이템을 요청해야
+                        mModel.request_mission_item((msg_item.seq + 1));
+                    }
+                }
+
+            }
+            break;
 
 //            case MAVLINK_MSG_ID_MISSION_ITEM:  // 39
 //            {
@@ -534,7 +533,8 @@ public class MAVLinkReceiver {
     public long getTimestampLastGCSHeartbeat() {
         return mTimeStampLastGCSHeartbeat;
     }
-//
+
+    //
 //    private void changeFlightMode(int flightMode) {
 //        mModel.setGCSCommandedMode(flightMode);
 //
@@ -564,7 +564,14 @@ public class MAVLinkReceiver {
 //    }
 //
 //    // Generate a new Mission element, with default speed...
-//    protected void generateNewMission() {
+    protected void generateNewMission() {//빈 미션 하나를 만들어 줌
+
+
+        WaypointInfoModel wpInfomodel = new WaypointInfoModel();
+        WaylineWaypoint waypoint = new WaylineWaypoint();
+        waypoint.setWaypointIndex(0);//첫 웨이포인트 미션 생성할거니까
+
+
 //        mBuilder = new WaypointMission.Builder().
 //                autoFlightSpeed(m_autoFlightSpeed).
 //                maxFlightSpeed(m_maxFlightSpeed).
@@ -579,11 +586,12 @@ public class MAVLinkReceiver {
 //        } else {
 //            mBuilder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
 //        }
-//    }
-//
-//    protected void finalizeNewMission() {
-//        ArrayList<Waypoint> dji_wps = new ArrayList<Waypoint>();
-//        Waypoint currentWP = null;
+    }
+
+    //
+    protected void finalizeNewMission() {
+        ArrayList<WaylineWaypoint> dji_wps = new ArrayList<WaylineWaypoint>();
+        WaylineWaypoint currentWLWP = null;
 //
 //        Log.d(TAG, "==============================");
 //        Log.d(TAG, "Waypoint Mission Uploading");
@@ -835,7 +843,9 @@ public class MAVLinkReceiver {
 //
 //        mMissionItemList=null;  // Flush the mission list...
 //        isHome = true;
-//    }
+    }
+
+
 //
 //    private void logWaypointstoRD(ArrayList<Waypoint> wps) {
 //        Log.d(TAG, "==============================");

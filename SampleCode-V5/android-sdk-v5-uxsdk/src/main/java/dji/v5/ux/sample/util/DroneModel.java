@@ -7,6 +7,7 @@ import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_LIMITED;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.FARMING;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI_WRISTBAND;
+import static dji.v5.ux.MAVLink.common.msg_set_position_target_global_int.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM;
 import static dji.v5.ux.MAVLink.enums.MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1;
 
@@ -887,7 +888,89 @@ public class DroneModel {
 //
 //    }
 
+    void request_mission_item(int seq) {
+        // Reset internal list
+        if(seq == 0)
+        {
+            stopWaypointMission();
+            //m_activeWaypointMission = null; //임시 주석처리, 현재 활성화 되어 있는 웨이포인트 미션을 담아둔 객체, 비슷한 역할을 할 객체를 V5에서 찾아야 한다.
+        }
 
+        msg_mission_request_int msg = new msg_mission_request_int();
+        msg.seq = seq;
+        msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
+        sendMessage(msg);
+    }
+
+    public void stopWaypointMission() {
+        mAutonomy = false;
+        //내용 달아야 함
+
+    }
+
+//    public void goto_position(double Lat, double Lon, float alt, float head) {
+//        //TimeLine.TimeLineGoTo(Lat, Lon, alt, (float) 2.0, head);
+//        //TimeLine.startTimeline();
+//        gotoNoPhoto = true;
+//        do_set_motion_absolute(Lat, Lon, alt, head, 2.5f, 2.5f, 2.5f, 2.5f, 0);
+//    }
+//    public void do_set_motion_absolute(double Lat, double Lon, float alt, float head, float vx, float vy, float vz, float yaw_rate, int mask) {
+//        //    Log.i(TAG, "do_set_motion_absolute");
+//        photoTaken = false;
+//
+//        // Set our new destination...
+//        mDestinationLat = Lat;
+//        mDestinationLon = Lon;
+//        mDestinationAlt = alt;
+//        mDestinationYaw = head;
+//        mDestinationYawrate = yaw_rate;
+//        mDestinationSetVx = vx;
+//        mDestinationSetVy = vy;
+//        mDestinationSetVz = vz;
+//        mDestinationMask = mask;
+//        m_lastCommand = MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
+//
+//        //------------------------------------------------
+//        // To be able to follow a straight line...
+//
+//        double locallat = mLatitude;
+//        double locallon = mLongitude;
+//
+//        // Find the bearing to wp... return 0-360 deg.
+//        mDestinationbrng = getBearingBetweenWaypoints(mDestinationLat, mDestinationLon, locallat, locallon) - 180;
+//        if (mDestinationbrng < 0) mDestinationbrng = mDestinationbrng + 360;
+//
+//        // The direct distance to the wp... return distance in meters...
+//        mDestinationhypotenuse = getRangeBetweenWaypointsm(mDestinationLat, mDestinationLon, 0, locallat, locallon, 0);
+//        Log.i(TAG, "mDestinationhypotenuse: " + mDestinationhypotenuse + " mDestinationbrng: " + mDestinationbrng);
+//
+//        do_start_absolute_motion();
+//    }
+//    private void do_start_absolute_motion() {
+//
+//        if (mMoveToDataTimer == null) {
+//            parent.logMessageDJI("Starting Absolution Mission!");
+//
+//            if(!m_CruisingMode)
+//            {
+//                miniPIDFwd.reset();
+//                miniPIDSide.reset();
+//                miniPIDAlti.reset();
+//                miniPIDHeading.reset();
+//            }
+//
+//
+//            mMoveToDataTask = new MoveTo();
+//            mMoveToDataTimer = new Timer();
+//
+//            mMoveToDataTimer.schedule(mMoveToDataTask, 100, 50);
+//            mAutonomy = true;
+//        } else {
+//            mMoveToDataTask.detection = 0;
+//        }
+//    }
+    
+    
     public void initMissionManager() {
 
         mMissionManager = WaypointMissionManager.getInstance();
@@ -1499,7 +1582,7 @@ public class DroneModel {
     public static boolean isDev = false;//개발중인지 여부를 식별하기 위한 boolean값
     public static double DEFUALT_LATITUDE = 37.3895865; // 37.3946352; // 37.3901804;//개발중일 때 사용할 임의의 위도값
 
-    public static double DEFUALT_LONGITUDE = 126.6417732; //126.6381979; // 126.6413591;//개발중일 때 사용할 임의의 경도값
+    public static double DEFUALT_LONGITUDE = 126.641773; //126.6381979; // 126.6413591;//개발중일 때 사용할 임의의 경도값
     private final boolean doImageInterval = false;//기체가 현재 웨이포인트와 다음 웨이포인트 사이를 이동할 때 두 장의 사진이 촬영되는 시간 간격(초)
     private final float captureInterval = 0.0f;//사진 찍는 간격, DDM내에서 주석처리 되어있는거 보니 안쓰이는듯
     private final int batteryIndex = 0;
@@ -1582,15 +1665,15 @@ public class DroneModel {
     public Waypoint waypoint = null;
 
     private final float mThrottle = 0;//설정해주는 쓰로틀 값
-    private final double mDestinationLat = 0;//관제에서 전달받은 임무 명령의 위도
-    private final double mDestinationLon = 0;//관제에서 전달받은 임무 명령의 경도
-    private final float mDestinationAlt = 0;//관제에서 전달받은 임무 명령의 고도
-    private final double mDestinationYaw = 0;//관제에서 전달받은 임무 명령의 YAW값
-    private final double mDestinationYawrate = 0; //관제에서 전달받은 임무 명령의 YAW 비율(?)
-    private final float mDestinationSetVx = -1;//관제에서 전달받은 임무 명령의 x축속도
-    private final float mDestinationSetVy = -1;//관제에서 전달받은 임무 명령의 y축속도
-    private final float mDestinationSetVz = -1;//관제에서 전달받은 임무 명령의 z축속도
-    private final int mDestinationMask = 0; //?
+    private double mDestinationLat = 0;//관제에서 전달받은 임무 명령의 위도
+    private  double mDestinationLon = 0;//관제에서 전달받은 임무 명령의 경도
+    private float mDestinationAlt = 0;//관제에서 전달받은 임무 명령의 고도
+    private  double mDestinationYaw = 0;//관제에서 전달받은 임무 명령의 YAW값
+    private  double mDestinationYawrate = 0; //관제에서 전달받은 임무 명령의 YAW 비율(?)
+    private  float mDestinationSetVx = -1;//관제에서 전달받은 임무 명령의 x축속도
+    private  float mDestinationSetVy = -1;//관제에서 전달받은 임무 명령의 y축속도
+    private  float mDestinationSetVz = -1;//관제에서 전달받은 임무 명령의 z축속도
+    private int mDestinationMask = 0; //?
     private final double mDestinationbrng = 0; //웨이포인트와 현재 기체위치의 방위각
     private final double mDestinationhypotenuse = 0; //목적지까지 거리
 
