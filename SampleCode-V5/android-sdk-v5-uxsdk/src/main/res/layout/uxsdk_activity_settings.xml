@@ -11,14 +11,14 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Drone ID : "/>
+                android:text="Drone ID : " />
 
             <EditText
                 android:id="@+id/drone_id"
@@ -26,5 +26,56 @@
                 android:layout_height="wrap_content"
                 android:text="3"/>
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="use external GCS : " />
+
+            <Switch
+                android:id="@+id/drone_use_external_gcs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GCS IP : " />
+
+            <EditText
+                android:id="@+id/drone_gcs_ip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="223.130.163.167"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GCS PORT : " />
+
+            <EditText
+                android:id="@+id/drone_gcs_port"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="6760"/>
+        </LinearLayout>
+
+
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

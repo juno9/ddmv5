@@ -193,7 +193,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private String mNewInbound = "";
     private String mNewDJI = "";
-    String id;
+    String id, gcsip, gcsport;
+
     private LiveStreamManager iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
     private CameraStreamManager iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
     //private DDMImageHandler mDDMImageHandler;
@@ -256,8 +257,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
 
         prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity.this);
-         id = prefs.getString("pref_drone_id", "10000");
-
+        id = prefs.getString("pref_drone_id", "10000");
+        gcsip = prefs.getString("pref_gcs_ip", "127.0.0.1");
+        gcsport = prefs.getString("pref_telem_port", "10000");
 
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
@@ -665,35 +667,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-                                    //RTMP 스트리밍 기능 추가
-                                    List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록 먼저 확인
-                                    mainActivityWeakReference.get().Log("비디오 리스트" + list.toString());
-
-                                    String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone" +mainActivityWeakReference.get().id + ".stream";
-                                    LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
-                                            .setLiveStreamType(LiveStreamType.RTMP)
-                                            .setRtmpSettings(new RtmpSettings.Builder()
-                                                    .setUrl(rtmpUrl)
-                                                    .build()
-                                            ).build();
-
-                                    mainActivityWeakReference.get().iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
-
-                                    mainActivityWeakReference.get().iLiveStreamManager.setCameraIndex(list.get(0).getPosition());//사용 가능한 카메라 목록에서 가장 먼저 잡히는 카메라에서 찍는 영상을 송출하도록 세팅
-                                    mainActivityWeakReference.get().iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
-                                        @Override
-                                        public void onSuccess() {
-                                            mainActivityWeakReference.get().Log("스트리밍 시작함");
-                                        }
-
-                                        @Override
-                                        public void onFailure(@NonNull IDJIError idjiError) {
-                                            mainActivityWeakReference.get().Log("스트리밍 못함");
-                                        }
-                                    });
+                                  //  startLiveStream();   //임시 주석처리
 
 
-                                });//RTMP 스트리밍 기능 추가
+                                });
                                 //라이브스트림 매니저는 setquality, setbitrate등의 메소드를 제공
                             } else {
                                 final Drawable disconnectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_outline_disconnected_24px, null);
@@ -791,6 +768,34 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             return 0;
         }
 
+        public void startLiveStream() {
+            //RTMP 스트리밍 기능 추가
+            List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록 먼저 확인
+            mainActivityWeakReference.get().Log("비디오 리스트" + list.toString());
+
+            String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone" + mainActivityWeakReference.get().id + ".stream";
+            LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
+                    .setLiveStreamType(LiveStreamType.RTMP)
+                    .setRtmpSettings(new RtmpSettings.Builder()
+                            .setUrl(rtmpUrl)
+                            .build()
+                    ).build();
+
+            mainActivityWeakReference.get().iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
+
+            mainActivityWeakReference.get().iLiveStreamManager.setCameraIndex(list.get(0).getPosition());//사용 가능한 카메라 목록에서 가장 먼저 잡히는 카메라에서 찍는 영상을 송출하도록 세팅
+            mainActivityWeakReference.get().iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onSuccess() {
+                    mainActivityWeakReference.get().Log("스트리밍 시작함");
+                }
+
+                @Override
+                public void onFailure(@NonNull IDJIError idjiError) {
+                    mainActivityWeakReference.get().Log("스트리밍 못함");
+                }
+            });
+        }
 
         @Override
         protected void onPostExecute(Integer integer) {
@@ -827,16 +832,16 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         private void createTelemfetryTcpOutSocket() {// GCS와 연결하는 부분
             close();
 
-            String gcsIPString = "223.130.163.167";
+            String gcsIPString = "223.130.122.222";
 
-//            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
-//                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
-//
-//            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
-            gcsIPString = "223.130.163.167"; //"220.79.19.247";// 현재 GCS IP 주소 하드코딩으로 입력해 둔 상태
-            int telemIPPort = 6760;// 현재 GCS PORT 하드코딩으로 입력해 둔 상태
+            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false)) {
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
+            }
+            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
+//            gcsIPString = "223.130.163.167"; //"220.79.19.247";// 현재 GCS IP 주소 하드코딩으로 입력해 둔 상태
+//            int telemIPPort = 6760;// 현재 GCS PORT 하드코딩으로 입력해 둔 상태
 
-            Log.d(TAG, "gcsIPString :: Host-IP:" + gcsIPString + "HostPort:" + telemIPPort);
+            Log.d(TAG, "gcsIPString :: Host-IP:" + gcsIPString + " HostPort:" + telemIPPort);
 
 
             try {
@@ -910,14 +915,14 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             String gcsIPString = "223.130.163.16";
 
-            //임시 주석처리
-//            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
-//                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
-            //int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
+//            임시 주석처리
+            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
+            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
 
 
-            gcsIPString = "223.130.163.16";
-            int telemIPPort = 6760;
+//            gcsIPString = "223.130.163.666";
+//            int telemIPPort = 6760;
             try {
                 mainActivityWeakReference.get().socket = new DatagramSocket();
                 mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);

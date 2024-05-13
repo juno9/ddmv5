@@ -835,8 +835,8 @@ class WayPointV3Fragment : DJIFragment() {
 
         val etHeight = dialogView.findViewById<View>(R.id.et_height) as EditText //  alt값
         val etSpd = dialogView.findViewById<View>(R.id.et_speed) as EditText
-        val viewActionType = dialogView.findViewById<View>(R.id.action_type) as DescSpinnerCell
-        val btnAdd = dialogView.findViewById<View>(R.id.btn_add) as Button
+        val viewActionType = dialogView.findViewById<View>(R.id.action_type) as DescSpinnerCell //수행할 액션 목록
+        val btnAdd = dialogView.findViewById<View>(R.id.btn_add) as Button // 추가 버튼
         val btnCancel = dialogView.findViewById<View>(R.id.btn_cancel) as Button
 
         btnAdd.setOnClickListener {

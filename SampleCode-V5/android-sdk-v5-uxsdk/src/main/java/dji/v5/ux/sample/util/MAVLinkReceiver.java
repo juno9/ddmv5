@@ -51,6 +51,7 @@ import android.util.Log;
 
 import com.dji.wpmzsdk.common.data.Template;
 
+import dji.sdk.keyvalue.value.mission.WaypointMission;
 import dji.sdk.wpmz.value.mission.WaylineTemplateWaypointInfo;
 import dji.sdk.wpmz.value.mission.WaylineWaypoint;
 import dji.sdk.wpmz.value.mission.WaylineWaypointPitchMode;
@@ -104,7 +105,6 @@ public class MAVLinkReceiver {
     private float m_autoFlightSpeed = 2.0f;
     private float m_maxFlightSpeed = 5.0f;
 
-    private KMZTestUtil kmzTestUtil = new KMZTestUtil();
 
     private final int WP_STATE_INACTIVE = 0;
     private final int WP_STATE_REQ_COUNT = 1;
@@ -118,7 +118,9 @@ public class MAVLinkReceiver {
     private int wpState = 0;
     private DefaultLayoutActivity parent;
     //private WaypointMission.Builder mBuilder;
-    private ArrayList<msg_mission_item_int> mMissionItemList;
+    private ArrayList<msg_mission_item> mMissionItemList;
+    private ArrayList<msg_mission_item_int> mMissionItemintList;
+    private ArrayList<WaypointInfoModel> mWLIMList=new ArrayList<>();
     private boolean isHome = true;
 
 
@@ -134,7 +136,7 @@ public class MAVLinkReceiver {
 
         // IS 0 is hart beat...
         if (msg.msgid != 0) {
-            // Log.d(TAG, msg.toString());
+            Log.d(TAG, msg.toString());
         }
 
         switch (msg.msgid) {
@@ -417,7 +419,7 @@ public class MAVLinkReceiver {
 
                 mNumGCSWaypoints = msg_count.count;//받을 아이템 갯수 먼저 마브링크 리시버 내에 저장
                 wpState = WP_STATE_REQ_WP;//현재 웨이포인트 관련 진행상황 저장
-                mMissionItemList = new ArrayList<msg_mission_item_int>();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
+                mMissionItemList = new ArrayList<msg_mission_item>();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
 
 
                 Log.d(TAG, "Mission REQ: 0...");
@@ -440,14 +442,12 @@ public class MAVLinkReceiver {
                     Log.d(TAG, "Error Sequence error!");
                     mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);//gcs에 ACk전송
                 } else {
-                    mMissionItemList.add(msg_item);//아이템을 리스트에 담음
-
-
+                    mMissionItemintList.add(msg_item);//아이템을 리스트에 담음
                     if (msg_item.seq == mNumGCSWaypoints - 1) {// seq값이 (count-1) 과 같다면 == 마지막 아이템이라면
                         wpState = WP_STATE_INACTIVE;
                         finalizeNewMission();
                     } else {//마지막 아이템이 아니라면
-                        Log.d(TAG, "Mission REQ: " + msg_item.seq + 1);// 받은 아이템의 seq+1 번째 아이템을 요청해야
+                        Log.d(TAG, "Mission REQ: " + (msg_item.seq + 1));// 받은 아이템의 seq+1 번째 아이템을 요청해야
                         mModel.request_mission_item((msg_item.seq + 1));
                     }
                 }
@@ -455,7 +455,30 @@ public class MAVLinkReceiver {
             }
             break;
 
-//            case MAVLINK_MSG_ID_MISSION_ITEM:  // 39
+            case MAVLINK_MSG_ID_MISSION_ITEM:  // 39
+
+                msg_mission_item msg_item = (msg_mission_item) msg;//수신한 메시지 item 메시지 로 변환
+                Log.d(TAG, "Add mission: " + msg_item.seq);
+
+                if (mModel.getSystemId() != msg_item.target_system) {//메시지의 타겟이 이 드론이 맞는지 먼저 확인, 아니라면 바로 조건문 탈출
+                    break;
+                }
+
+                if (mMissionItemList == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
+                    Log.d(TAG, "Error Sequence error!");
+                    mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);//gcs에 ACk전송
+                } else {
+                    mMissionItemList.add(msg_item);//아이템을 리스트에 담음
+                    if (msg_item.seq == mNumGCSWaypoints - 1) {// seq값이 (count-1) 과 같다면 == 마지막 아이템이라면
+                        wpState = WP_STATE_INACTIVE;
+                        finalizeNewMission();
+                    } else {//마지막 아이템이 아니라면
+                        Log.d(TAG, "Mission REQ: " + (msg_item.seq + 1));// 받은 아이템의 seq+1 번째 아이템을 요청해야
+                        mModel.request_mission_item((msg_item.seq + 1));
+                    }
+                }
+
+
 //            {
 //                // Is this message to this system...
 //                msg_mission_item msg_item = (msg_mission_item) msg;
@@ -509,9 +532,9 @@ public class MAVLinkReceiver {
 //            break;
 
 
-            /**************************************************************
-             * These messages from GCS direct a mission-related action    *
-             **************************************************************/
+                /**************************************************************
+                 * These messages from GCS direct a mission-related action    *
+                 **************************************************************/
 
             case MAVLINK_MSG_ID_MISSION_SET_CURRENT:
                 Log.d(TAG, "MSN: received set_current from GCS");
@@ -519,13 +542,17 @@ public class MAVLinkReceiver {
                 break;
 
             // Clear all mission states...
-//            case MAVLINK_MSG_ID_MISSION_CLEAR_ALL:
-//                Log.d(TAG, "MSN: received clear_all from GCS");
+            case MAVLINK_MSG_ID_MISSION_CLEAR_ALL:
+                Log.d(TAG, "MSN: received clear_all from GCS");
+
+                if (mMissionItemList != null) {
+                    mMissionItemList = null;
+                }
 //                WaypointMission ym = mModel.getWaypointMissionOperator().getLoadedMission();
 //                if (ym != null) {
 //                    ym.getWaypointList().clear();
 //                }
-//                break;
+                break;
         }
     }
 
@@ -567,9 +594,9 @@ public class MAVLinkReceiver {
     protected void generateNewMission() {//빈 미션 하나를 만들어 줌
 
 
-        WaypointInfoModel wpInfomodel = new WaypointInfoModel();
-        WaylineWaypoint waypoint = new WaylineWaypoint();
-        waypoint.setWaypointIndex(0);//첫 웨이포인트 미션 생성할거니까
+        if (mWLIMList != null) {
+            mWLIMList.clear();
+        }
 
 
 //        mBuilder = new WaypointMission.Builder().
@@ -592,7 +619,17 @@ public class MAVLinkReceiver {
     protected void finalizeNewMission() {
         ArrayList<WaylineWaypoint> dji_wps = new ArrayList<WaylineWaypoint>();
         WaylineWaypoint currentWLWP = null;
-//
+
+//        for (int i = 0; i < mMissionItemList.size(); i++) {
+//            mMissionItemList.get(i);//
+//            WaypointInfoModel wpInfomodel = new WaypointInfoModel();
+//            WaylineWaypoint waypoint = new WaylineWaypoint();
+//            waypoint.setWaypointIndex(i);//첫 웨이포인트 미션 생성할거니까
+//        }
+
+        mModel.send_mission_ack(MAV_RESULT.MAV_RESULT_ACCEPTED);
+
+
 //        Log.d(TAG, "==============================");
 //        Log.d(TAG, "Waypoint Mission Uploading");
 //        Log.d(TAG, "==============================");

@@ -1,5 +1,7 @@
 package dji.v5.ux.sample.util;
 
+import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_FOCUS;
+import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_ZOOM;
 import static java.lang.Thread.sleep;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ACTIVE_TRACK;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_HOVER;
@@ -32,6 +34,7 @@ import java.net.PortUnreachableException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -57,6 +60,7 @@ import dji.sdk.keyvalue.value.flightcontroller.VirtualStickFlightControlParam;
 import dji.sdk.keyvalue.value.flightcontroller.YawControlMode;
 import dji.sdk.keyvalue.value.mission.Waypoint;
 import dji.sdk.keyvalue.value.mission.Wayline;
+import dji.sdk.keyvalue.value.mission.WaypointAction;
 import dji.sdk.keyvalue.value.mission.WaypointMission;
 import dji.sdk.keyvalue.value.mission.WaypointMissionState;
 import dji.sdk.keyvalue.value.remotecontroller.BatteryInfo;
@@ -79,6 +83,7 @@ import dji.v5.ux.MAVLink.common.msg_heartbeat;
 import dji.v5.ux.MAVLink.common.msg_home_position;
 import dji.v5.ux.MAVLink.common.msg_mission_ack;
 import dji.v5.ux.MAVLink.common.msg_mission_count;
+import dji.v5.ux.MAVLink.common.msg_mission_item_int;
 import dji.v5.ux.MAVLink.common.msg_mission_request_int;
 import dji.v5.ux.MAVLink.common.msg_mission_request_list;
 import dji.v5.ux.MAVLink.common.msg_param_value;
@@ -90,6 +95,8 @@ import dji.v5.ux.MAVLink.common.msg_vfr_hud;
 import dji.v5.ux.MAVLink.common.msg_vibration;
 import dji.v5.ux.MAVLink.enums.GPS_FIX_TYPE;
 import dji.v5.ux.MAVLink.enums.MAV_AUTOPILOT;
+import dji.v5.ux.MAVLink.enums.MAV_CMD;
+import dji.v5.ux.MAVLink.enums.MAV_FRAME;
 import dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT;
 import dji.v5.ux.MAVLink.enums.MAV_MISSION_TYPE;
 import dji.v5.ux.MAVLink.enums.MAV_MODE_FLAG;
@@ -154,12 +161,12 @@ public class DroneModel {
         KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyGoHomeHeight), altitude, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                //parent.Log("RTL altitude set to " + altitude + "m");
+                ////parent.Log("RTL altitude set to " + altitude + "m");
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                //parent.Log("Error setting RTL altitude " + idjiError.description());
+                ////parent.Log("Error setting RTL altitude " + idjiError.description());
             }
         });
 
@@ -171,12 +178,12 @@ public class DroneModel {
         KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyLimitMaxFlightHeightInMeter), height, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                //parent.Log("Max height set to " + height + "m");
+                ////parent.Log("Max height set to " + height + "m");
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                //parent.Log("Error setting max height " + idjiError.description());
+                ////parent.Log("Error setting max height " + idjiError.description());
             }
         });
 
@@ -338,12 +345,12 @@ public class DroneModel {
 
         msg.system_status = MAV_STATE.MAV_STATE_ACTIVE;
         msg.mavlink_version = 3;
-        // //parent.Log("send_heartbeat %9%");
+        // ////parent.Log("send_heartbeat %9%");
         sendMessage(msg);
     }
 
     private void send_attitude() {
-        //   //parent.Log("send_attitude %1% ");
+        //   ////parent.Log("send_attitude %1% ");
         msg_attitude msg = new msg_attitude();
         // TODO: this next line causes an exception
         //msg.time_boot_ms = getTimestampMilliseconds();
@@ -358,7 +365,7 @@ public class DroneModel {
     }
 
     private void send_altitude() {
-        //  //parent.Log("send_altitude %2% ");
+        //  ////parent.Log("send_altitude %2% ");
         msg_altitude msg = new msg_altitude();
         msg.altitude_relative = (int) (mAlt);
         mAlt = msg.altitude_relative;
@@ -366,7 +373,7 @@ public class DroneModel {
     }
 
     private void send_vibration() {
-        // //parent.Log("send_vibration %3% ");
+        // ////parent.Log("send_vibration %3% ");
         msg_vibration msg = new msg_vibration();
         sendMessage(msg);
     }
@@ -402,7 +409,7 @@ public class DroneModel {
         // Mavlink: Current climb rate in meters/second
         // DJI: m/s, positive values down
         msg.climb = -(short) (velocityz);
-        //  //parent.Log("send_vfr_hud %4% ");
+        //  ////parent.Log("send_vfr_hud %4% ");
         sendMessage(msg);
     }
 
@@ -444,7 +451,7 @@ public class DroneModel {
         if (yaw < 0)
             yaw += 360;
         msg.hdg = (int) (yaw * 100);
-       // parent.Log("send_global_position_int %5% ");
+       // //parent.Log("send_global_position_int %5% ");
         sendMessage(msg);
     }
 
@@ -477,7 +484,7 @@ public class DroneModel {
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                ////parent.Log("KeyGPSSatelliteCount Failed");
+                //////parent.Log("KeyGPSSatelliteCount Failed");
             }
         });
 
@@ -492,7 +499,7 @@ public class DroneModel {
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                ////parent.Log("KeyGPSSignalLevel Failed");
+                //////parent.Log("KeyGPSSignalLevel Failed");
             }
         });
 
@@ -505,7 +512,7 @@ public class DroneModel {
         if (gpsLevel[0] == GPSSignalLevel.LEVEL_3 || gpsLevel[0] == GPSSignalLevel.LEVEL_4 ||
                 gpsLevel[0] == GPSSignalLevel.LEVEL_5)
             msg.fix_type = GPS_FIX_TYPE.GPS_FIX_TYPE_3D_FIX;
-        ////parent.Log("send_gps_raw_int %6% ");
+        //////parent.Log("send_gps_raw_int %6% ");
         sendMessage(msg);
     }
 
@@ -513,7 +520,7 @@ public class DroneModel {
         msg_radio_status msg = new msg_radio_status();
         msg.rssi = 0; // TODO: work out units conversion (see issue #1)
         msg.remrssi = 0; // TODO: work out units conversion (see issue #1)
-        // //parent.Log("send_radio_status %7%");
+        // ////parent.Log("send_radio_status %7%");
         sendMessage(msg);
     }
 
@@ -534,7 +541,7 @@ public class DroneModel {
                 (mRightStickVertical > 1550 || mRightStickVertical < 1450) ||
                 (mRightStickHorisontal > 1550 || mRightStickHorisontal < 1450)) {
             if (mAIfunction_activation != 0) {
-                //parent.Log("AI Mode Canceled...");
+                ////parent.Log("AI Mode Canceled...");
                 mAIfunction_activation = 0;
             }
 
@@ -544,7 +551,7 @@ public class DroneModel {
 
         msg.chan8_raw = (mAIfunction_activation * 100) + 1000;
         msg.chancount = 8;
-        // //parent.Log("send_rc_channels %8%");
+        // ////parent.Log("send_rc_channels %8%");
         sendMessage(msg);
     }
 
@@ -562,13 +569,13 @@ public class DroneModel {
 
         msg.voltage_battery = mCVoltage_mV;
         msg.current_battery = (short) mCCurrent_mA;
-        //  //parent.Log("send_sys_status %10%");
+        //  ////parent.Log("send_sys_status %10%");
         sendMessage(msg);
     }
 
     private void send_power_status() {
         msg_power_status msg = new msg_power_status();
-        // //parent.Log("send_power_status %11%");
+        // ////parent.Log("send_power_status %11%");
         sendMessage(msg);
     }
 
@@ -586,7 +593,7 @@ public class DroneModel {
         //      Log.d(TAG, "send_battery_status() complete");
         // TODO cell voltages
 
-        // //parent.Log("send_battery_status %12%");
+        // ////parent.Log("send_battery_status %12%");
         sendMessage(msg);
     }
 
@@ -604,7 +611,7 @@ public class DroneModel {
         // msg.approach_x = 0;
         // msg.approach_y = 0;
         // msg.approach_z = 0;
-        // //parent.Log("send_home_position %13%");
+        // ////parent.Log("send_home_position %13%");
         sendMessage(msg);
     }
     void set_home_position(double lat, double lon) {
@@ -613,12 +620,12 @@ public class DroneModel {
         KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyHomeLocation), new LocationCoordinate2D(lat, lon), new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                parent.Log("set_home_position Done");
+                //parent.Log("set_home_position Done");
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                parent.Log("set_home_position Failed");
+                //parent.Log("set_home_position Failed");
             }
         });
     }
@@ -897,9 +904,11 @@ public class DroneModel {
         }
 
         msg_mission_request_int msg = new msg_mission_request_int();
+        msg.sysid=getSystemId();
         msg.seq = seq;
         msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
         sendMessage(msg);
+        parent.Log("sent message: "+msg);
     }
 
     public void stopWaypointMission() {
@@ -907,6 +916,7 @@ public class DroneModel {
         //내용 달아야 함
 
     }
+
 
 //    public void goto_position(double Lat, double Lon, float alt, float head) {
 //        //TimeLine.TimeLineGoTo(Lat, Lon, alt, (float) 2.0, head);
@@ -977,7 +987,7 @@ public class DroneModel {
     }
 
     public void toastinMain(String inputfrommodel) {
-        //parent.Log(inputfrommodel);
+        ////parent.Log(inputfrommodel);
     }
 
     private void SetMesasageBox(String msg) {
@@ -1043,7 +1053,7 @@ public class DroneModel {
                 if (secondarySocket != null) {
                     DatagramPacket secondaryPacket = new DatagramPacket(bytes, bytes.length, secondarySocket.getInetAddress(), secondarySocket.getPort());
                     secondarySocket.send(secondaryPacket);
-//                //parent.Log("SECONDARY PACKET SENT");
+//                ////parent.Log("SECONDARY PACKET SENT");
                 }
 //            if(msg.msgid != MAVLINK_MSG_ID_POWER_STATUS &&
 //                    msg.msgid != MAVLINK_MSG_ID_SYS_STATUS &&
@@ -1054,7 +1064,7 @@ public class DroneModel {
 //                    msg.msgid != MAVLINK_MSG_ID_GPS_RAW_INT &&
 //                    msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS)
 //                //parent.LogMessageToGCS(msg.toString());
-               // parent.Log("UDP Send :"+msg.toString());
+               // //parent.Log("UDP Send :"+msg.toString());
             } else {
 
                 // TODO TCP Send
@@ -1068,7 +1078,7 @@ public class DroneModel {
                 os.flush();
 //                Log.d(TAG, "Confirm, TCP Packet Config IP : {}, Port : {} Received-IP:"+ this.mIsa.getAddress() + " / Received-localport:" +  this.mIsa.getPort());
 
-               // parent.Log("TCP Send :" + msg.toString());
+               // //parent.Log("TCP Send :" + msg.toString());
             }
 
         } catch (PortUnreachableException ignored) {
@@ -1255,10 +1265,13 @@ public class DroneModel {
 
     void send_command_ack(int message_id, int result) {
         msg_command_ack msg = new msg_command_ack();
+        msg.sysid=getSystemId();
         msg.command = message_id;
         msg.result = (short) result;
+        parent.Log("send_command_ack");
         sendMessage(msg);
     }
+
 
 
     public void listen3DLocation() {
@@ -1282,12 +1295,12 @@ public class DroneModel {
             @Override
             public void onSuccess(Integer integer) {
                 mThrottleSetting = (int) integer;
-                parent.Log("listenRemoteControllerSticks() %4% mThrottleSetting " + integer);
+                //parent.Log("listenRemoteControllerSticks() %4% mThrottleSetting " + integer);
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                parent.Log("listenRemoteControllerSticks() %4% mThrottleSetting : failed");
+                //parent.Log("listenRemoteControllerSticks() %4% mThrottleSetting : failed");
             }
         });
 
@@ -1295,42 +1308,42 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mLeftStickVertical = (int) (t1 * 0.8) + 1500;
-                parent.Log("listenRemoteControllerSticks() %5% mLeftStickVertical : " + mLeftStickVertical);
+                //parent.Log("listenRemoteControllerSticks() %5% mLeftStickVertical : " + mLeftStickVertical);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickLeftHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mLeftStickHorisontal = (int) (t1 * 0.8) + 1500;
-                parent.Log("listenRemoteControllerSticks() %6% mLeftStickHorisontal : " + mLeftStickHorisontal);
+                //parent.Log("listenRemoteControllerSticks() %6% mLeftStickHorisontal : " + mLeftStickHorisontal);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightVertical), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mRightStickVertical = (int) (t1 * 0.8) + 1500;
-                parent.Log("listenRemoteControllerSticks() %7% mRightStickVertical : " + mRightStickVertical);
+                //parent.Log("listenRemoteControllerSticks() %7% mRightStickVertical : " + mRightStickVertical);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mRightStickHorisontal = (int) (t1 * 0.8) + 1500;
-                parent.Log("listenRemoteControllerSticks() %8% mRightStickHorisontal : " + mRightStickHorisontal);
+                //parent.Log("listenRemoteControllerSticks() %8% mRightStickHorisontal : " + mRightStickHorisontal);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton1Down), this, new CommonCallbacks.KeyListener<Boolean>() {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC1 = t1;
-                parent.Log("listenRemoteControllerSticks() %9% mC1 clicked : " + mC1);
+                //parent.Log("listenRemoteControllerSticks() %9% mC1 clicked : " + mC1);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton2Down), this, new CommonCallbacks.KeyListener<Boolean>() {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC2 = t1;
-                parent.Log("listenRemoteControllerSticks() %10% mC2 clicked : " + mC2);
+                //parent.Log("listenRemoteControllerSticks() %10% mC2 clicked : " + mC2);
             }
         });
 
@@ -1338,7 +1351,7 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC3 = t1;
-                parent.Log("listenRemoteControllerSticks() %11% mC3 clicked : " + mC3);
+                //parent.Log("listenRemoteControllerSticks() %11% mC3 clicked : " + mC3);
             }
         });
 
@@ -1350,7 +1363,7 @@ public class DroneModel {
                     public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                         if (t1 != null) {
                             isMotorOn = t1;
-                            parent.Log("%12% listenIsMotorOn() : " + isMotorOn);
+                            //parent.Log("%12% listenIsMotorOn() : " + isMotorOn);
                         }
                     }
                 }
@@ -1368,7 +1381,7 @@ public class DroneModel {
                     mPitch = t1.getPitch();
                     mRoll = t1.getRoll();
                     mYaw = t1.getYaw();
-                    parent.Log(" %13% listenAttitude() pitch: " + mPitch + " " + " %14% roll: " + mRoll + " " + " %15% yaw: " + mYaw);
+                    //parent.Log(" %13% listenAttitude() pitch: " + mPitch + " " + " %14% roll: " + mRoll + " " + " %15% yaw: " + mYaw);
 
                 }
             }
@@ -1382,7 +1395,7 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCChargeRemaining_mAh = (int) t1;
-                parent.Log("%16% mCChargeRemaining_mAh : " + mCChargeRemaining_mAh);
+                //parent.Log("%16% mCChargeRemaining_mAh : " + mCChargeRemaining_mAh);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyCellVoltages), this, new CommonCallbacks.KeyListener<List<Integer>>() {
@@ -1390,7 +1403,7 @@ public class DroneModel {
             public void onValueChange(@Nullable List<Integer> integers, @Nullable List<Integer> t1) {
                 for (int i = 0; i < t1.size(); i++) {
                     mCellVoltages[i] = t1.get(i);
-                    parent.Log("%17% got cell voltages, v[" + i + "] =" + mCellVoltages[i]);
+                    //parent.Log("%17% got cell voltages, v[" + i + "] =" + mCellVoltages[i]);
                 }
             }
         });
@@ -1398,21 +1411,21 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCVoltage_mV = t1;
-                parent.Log("%18% mCVoltage_mV : " + mCVoltage_mV);
+                //parent.Log("%18% mCVoltage_mV : " + mCVoltage_mV);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyChargeRemainingInPercent), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCVoltage_pr = (int) t1;
-                parent.Log("%19% mCVoltage_pr : " + mCVoltage_pr);
+                //parent.Log("%19% mCVoltage_pr : " + mCVoltage_pr);
             }
         });
         KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyBatteryTemperature), this, new CommonCallbacks.KeyListener<Double>() {
             @Override
             public void onValueChange(@Nullable Double aDouble, @Nullable Double t1) {
                 mCBatteryTemp_C = t1;
-                parent.Log("%20% mCBatteryTemp_C : " + mCBatteryTemp_C);
+                //parent.Log("%20% mCBatteryTemp_C : " + mCBatteryTemp_C);
 
             }
         });
@@ -1420,7 +1433,7 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCCurrent_mA = t1;
-                parent.Log("%21% mCCurrent_mA : " + mCCurrent_mA);
+                //parent.Log("%21% mCCurrent_mA : " + mCCurrent_mA);
             }
         });
 
@@ -1432,7 +1445,7 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable BatteryInfo batteryInfo, @Nullable BatteryInfo t1) {
                 mControllerVoltage_pr = (int) t1.getBatteryPercent();
-                parent.Log("%22% listenControllerBattery() mControllerVoltage_pr : " + mControllerVoltage_pr);
+                //parent.Log("%22% listenControllerBattery() mControllerVoltage_pr : " + mControllerVoltage_pr);
             }
         });
     }
@@ -1446,7 +1459,7 @@ public class DroneModel {
                             velocityx = t1.getX();
                             velocityy = t1.getY();
                             velocityz = t1.getZ();
-                            parent.Log("listenVelocity() %23% velocityx" + velocityx + " " + " %24% velocityy: " + velocityy + " " + " %25% velocityz: " + velocityz);
+                            //parent.Log("listenVelocity() %23% velocityx" + velocityx + " " + " %24% velocityy: " + velocityy + " " + " %25% velocityz: " + velocityz);
                         }
                     }
                 }
@@ -1461,7 +1474,7 @@ public class DroneModel {
                     public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                         if (t1 != null) {
                             isFlying = t1;
-                            parent.Log("listenIsFly() %26% isFlying : " + isFlying);
+                            //parent.Log("listenIsFly() %26% isFlying : " + isFlying);
                         }
                     }
                 }
@@ -1475,7 +1488,7 @@ public class DroneModel {
             @Override
             public void onValueChange(@Nullable FlightMode flightMode, @Nullable FlightMode t1) {
                 lastMode = t1;
-                parent.Log("%27% getFlightMode() : " + lastMode.toString());
+                //parent.Log("%27% getFlightMode() : " + lastMode.toString());
             }
         });
 
@@ -1487,7 +1500,7 @@ public class DroneModel {
                     @Override
                     public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                         mUplinkQuality = t1;
-                        parent.Log("%28% mUplinkQuality : " + mUplinkQuality);
+                        //parent.Log("%28% mUplinkQuality : " + mUplinkQuality);
                     }
                 }
 
@@ -1496,7 +1509,7 @@ public class DroneModel {
                     @Override
                     public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                         mDownlinkQuality = t1;
-                        parent.Log("%29% mDownlinkQuality : " + mDownlinkQuality);
+                        //parent.Log("%29% mDownlinkQuality : " + mDownlinkQuality);
                     }
                 }
 
@@ -1510,12 +1523,12 @@ public class DroneModel {
             @Override
             public void onSuccess(FlightMode flightMode) {
                 lastMode = flightMode;
-                //parent.Log("getFlightMode() : " + flightMode.name());
+                ////parent.Log("getFlightMode() : " + flightMode.name());
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                //parent.Log("getFlightMode() Failed ");
+                ////parent.Log("getFlightMode() Failed ");
             }
         });
 
@@ -1529,12 +1542,12 @@ public class DroneModel {
             @Override
             public void onSuccess(Integer integer) {
                 mCFullChargeCapacity_mAh = (int) integer;
-                //parent.Log("%23% mFullChargeCapacity_mAh : " + mCFullChargeCapacity_mAh);
+                ////parent.Log("%23% mFullChargeCapacity_mAh : " + mCFullChargeCapacity_mAh);
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                //parent.Log("getfullchargecapacity() Failed ");
+                ////parent.Log("getfullchargecapacity() Failed ");
             }
         });
 
@@ -1552,7 +1565,7 @@ public class DroneModel {
 
                     @Override
                     public void onFailure(@NonNull IDJIError idjiError) {
-                        //parent.Log("Get isMotorOn Failed ");
+                        ////parent.Log("Get isMotorOn Failed ");
                     }
                 }
 
