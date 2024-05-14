@@ -12,6 +12,7 @@ import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI_WRIS
 import static dji.v5.ux.MAVLink.common.msg_set_position_target_global_int.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM;
 import static dji.v5.ux.MAVLink.enums.MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1;
+import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
@@ -70,6 +71,8 @@ import dji.v5.common.error.IDJIError;
 import dji.v5.manager.KeyManager;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.manager.interfaces.IKeyManager;
+import dji.v5.utils.common.ContextUtil;
+import dji.v5.utils.common.DiskUtil;
 import dji.v5.ux.MAVLink.MAVLinkPacket;
 import dji.v5.ux.MAVLink.Messages.MAVLinkMessage;
 import dji.v5.ux.MAVLink.common.msg_altitude;
@@ -115,10 +118,11 @@ import io.reactivex.rxjava3.core.Flowable;
 
 public class DroneModel {
     private static final int NOT_USING_GCS_COMMANDED_MODE = -1;
+
     /*
-    *드론 모델 객체가 초기화 되자 마자 listen메소드들을 실행하여 기체로부터 값들을 받아옴
-    *이 값들은 변경될 때마다 0.2초 주기로 변경된 값들을 받아 이 클래스 내의 전역변수로 선언되어 있는 값들을 갱신 함
-    */
+     *드론 모델 객체가 초기화 되자 마자 listen메소드들을 실행하여 기체로부터 값들을 받아옴
+     *이 값들은 변경될 때마다 0.2초 주기로 변경된 값들을 받아 이 클래스 내의 전역변수로 선언되어 있는 값들을 갱신 함
+     */
     public DroneModel(DefaultLayoutActivity defaultLayoutActivity) {
 
         this.parent = defaultLayoutActivity;
@@ -197,7 +201,6 @@ public class DroneModel {
 //이 값은 드론 펌웨어마다 유형을 분기할 수 있는 값. 현재 DJI용으로 UDB를 쓰고 있다.
 
 
-
         // For base mode logic, see Copter::sendHeartBeat() in ArduCopter/GCS_Mavlink.cpp
         msg.base_mode = MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
         msg.base_mode |= MAV_MODE_FLAG.MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
@@ -261,7 +264,7 @@ public class DroneModel {
             case APAS: {//고급 조종사 지원 시스템(Auto Pilot Assistance System) 사용
                 break;
             }
-            case MOTOR_START:{//모터 시작
+            case MOTOR_START: {//모터 시작
                 break;
             }
             case TAKE_OFF_READY: {//이륙 준비 완료
@@ -451,7 +454,7 @@ public class DroneModel {
         if (yaw < 0)
             yaw += 360;
         msg.hdg = (int) (yaw * 100);
-       // //parent.Log("send_global_position_int %5% ");
+        // //parent.Log("send_global_position_int %5% ");
         sendMessage(msg);
     }
 
@@ -614,6 +617,7 @@ public class DroneModel {
         // ////parent.Log("send_home_position %13%");
         sendMessage(msg);
     }
+
     void set_home_position(double lat, double lon) {
 
 
@@ -629,6 +633,7 @@ public class DroneModel {
             }
         });
     }
+
     void send_autopilot_version() {
         msg_autopilot_version msg = new msg_autopilot_version();
         msg.capabilities = MAV_PROTOCOL_CAPABILITY.MAV_PROTOCOL_CAPABILITY_COMMAND_INT;
@@ -641,10 +646,9 @@ public class DroneModel {
         sendMessage(msg);
 
 
-
     }
 
-//    void do_set_motion_velocity(float x, float y, float z, float yaw, int mask) {
+    //    void do_set_motion_velocity(float x, float y, float z, float yaw, int mask) {
 //        //    Log.i(TAG, "do_set_motion_velocity");
 //
 //        // If we use yaw rate...
@@ -897,18 +901,17 @@ public class DroneModel {
 
     void request_mission_item(int seq) {
         // Reset internal list
-        if(seq == 0)
-        {
+        if (seq == 0) {
             stopWaypointMission();
             //m_activeWaypointMission = null; //임시 주석처리, 현재 활성화 되어 있는 웨이포인트 미션을 담아둔 객체, 비슷한 역할을 할 객체를 V5에서 찾아야 한다.
         }
 
         msg_mission_request_int msg = new msg_mission_request_int();
-        msg.sysid=getSystemId();
+        msg.sysid = getSystemId();
         msg.seq = seq;
         msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
         sendMessage(msg);
-        parent.Log("sent message: "+msg);
+        parent.Log("sent message: " + msg);
     }
 
     public void stopWaypointMission() {
@@ -979,15 +982,15 @@ public class DroneModel {
 //            mMoveToDataTask.detection = 0;
 //        }
 //    }
-    
-    
+
+
     public void initMissionManager() {
 
         mMissionManager = WaypointMissionManager.getInstance();
     }
 
     public void toastinMain(String inputfrommodel) {
-        ////parent.Log(inputfrommodel);
+        parent.toast(inputfrommodel);
     }
 
     private void SetMesasageBox(String msg) {
@@ -1064,7 +1067,7 @@ public class DroneModel {
 //                    msg.msgid != MAVLINK_MSG_ID_GPS_RAW_INT &&
 //                    msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS)
 //                //parent.LogMessageToGCS(msg.toString());
-               // //parent.Log("UDP Send :"+msg.toString());
+                // //parent.Log("UDP Send :"+msg.toString());
             } else {
 
                 // TODO TCP Send
@@ -1078,7 +1081,7 @@ public class DroneModel {
                 os.flush();
 //                Log.d(TAG, "Confirm, TCP Packet Config IP : {}, Port : {} Received-IP:"+ this.mIsa.getAddress() + " / Received-localport:" +  this.mIsa.getPort());
 
-               // //parent.Log("TCP Send :" + msg.toString());
+                // //parent.Log("TCP Send :" + msg.toString());
             }
 
         } catch (PortUnreachableException ignored) {
@@ -1094,6 +1097,26 @@ public class DroneModel {
         msg.type = (short) status;
         msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
         sendMessage(msg);
+    }
+
+    public void uploadKMZfile(DroneModel model) {
+        WaypointMissionManager.getInstance().pushKMZFileToAircraft(kmzOutPath, new CommonCallbacks.CompletionCallbackWithProgress<Double>() {
+            @Override
+            public void onProgressUpdate(Double aDouble) {
+                Log.i(TAG,"uploading");
+            }
+
+            @Override
+            public void onSuccess() {
+               Log.i(TAG,"success");
+               toastinMain("uploadsuccess");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                Log.i(TAG,"upload failed");
+            }
+        });
     }
 
     public int getSystemId() {
@@ -1265,13 +1288,12 @@ public class DroneModel {
 
     void send_command_ack(int message_id, int result) {
         msg_command_ack msg = new msg_command_ack();
-        msg.sysid=getSystemId();
+        msg.sysid = getSystemId();
         msg.command = message_id;
         msg.result = (short) result;
         parent.Log("send_command_ack");
         sendMessage(msg);
     }
-
 
 
     public void listen3DLocation() {
@@ -1283,7 +1305,7 @@ public class DroneModel {
                     mLongitude = newValue.getLongitude();
                     mAlt = newValue.getAltitude();
 
-                  //  parent.toast("LAT: " + mLatitude + " " + "LON: " + mLongitude + " " +"ALT: " + mAlt);
+                    //  parent.toast("LAT: " + mLatitude + " " + "LON: " + mLongitude + " " +"ALT: " + mAlt);
                 }
             }
         });
@@ -1576,10 +1598,9 @@ public class DroneModel {
 
     //region Fields
 
-    public void test(){
-        mMissionManager=new WaypointMissionManager();
+    public void test() {
+        mMissionManager = new WaypointMissionManager();
     }
-
 
     //자바 기본, 엑셀에 정리할 필요 없는 것들
     private final String TAG = DroneModel.class.getSimpleName(); //클래스명
@@ -1679,18 +1700,22 @@ public class DroneModel {
 
     private final float mThrottle = 0;//설정해주는 쓰로틀 값
     private double mDestinationLat = 0;//관제에서 전달받은 임무 명령의 위도
-    private  double mDestinationLon = 0;//관제에서 전달받은 임무 명령의 경도
+    private double mDestinationLon = 0;//관제에서 전달받은 임무 명령의 경도
     private float mDestinationAlt = 0;//관제에서 전달받은 임무 명령의 고도
-    private  double mDestinationYaw = 0;//관제에서 전달받은 임무 명령의 YAW값
-    private  double mDestinationYawrate = 0; //관제에서 전달받은 임무 명령의 YAW 비율(?)
-    private  float mDestinationSetVx = -1;//관제에서 전달받은 임무 명령의 x축속도
-    private  float mDestinationSetVy = -1;//관제에서 전달받은 임무 명령의 y축속도
-    private  float mDestinationSetVz = -1;//관제에서 전달받은 임무 명령의 z축속도
+    private double mDestinationYaw = 0;//관제에서 전달받은 임무 명령의 YAW값
+    private double mDestinationYawrate = 0; //관제에서 전달받은 임무 명령의 YAW 비율(?)
+    private float mDestinationSetVx = -1;//관제에서 전달받은 임무 명령의 x축속도
+    private float mDestinationSetVy = -1;//관제에서 전달받은 임무 명령의 y축속도
+    private float mDestinationSetVz = -1;//관제에서 전달받은 임무 명령의 z축속도
     private int mDestinationMask = 0; //?
     private final double mDestinationbrng = 0; //웨이포인트와 현재 기체위치의 방위각
     private final double mDestinationhypotenuse = 0; //목적지까지 거리
+    String WAYPOINT_SAMPLE_FILE_NAME = "waypointsample.kmz";
+    String WAYPOINT_SAMPLE_FILE_DIR = "waypoint/";
+    String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
+    String kmzOutPath = rootDir + "generate_test.kmz";
 
-
+    boolean missionUploaded;
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();

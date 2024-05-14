@@ -39,6 +39,7 @@ import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_NAV_WAYPOINT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_VIDEO_START_CAPTURE;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_VIDEO_STOP_CAPTURE;
+import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 import static dji.v5.ux.MAVLink.enums.MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
 import static dji.v5.ux.MAVLink.ardupilotmega.msg_autopilot_version_request.MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST;
 import static dji.v5.ux.MAVLink.common.msg_heartbeat.MAVLINK_MSG_ID_HEARTBEAT;
@@ -49,14 +50,20 @@ import static dji.v5.ux.utils.KMZTestUtil.transformActionsFrom;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.dji.wpmzsdk.common.data.Template;
 
+import dji.sdk.keyvalue.value.mission.WaylineActionInfo;
 import dji.sdk.keyvalue.value.mission.WaypointMission;
+import dji.sdk.wpmz.value.mission.WaylineLocationCoordinate2D;
 import dji.sdk.wpmz.value.mission.WaylineTemplateWaypointInfo;
 import dji.sdk.wpmz.value.mission.WaylineWaypoint;
 import dji.sdk.wpmz.value.mission.WaylineWaypointPitchMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawParam;
+import dji.v5.common.callback.CommonCallbacks;
+import dji.v5.common.error.IDJIError;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.ux.MAVLink.Messages.MAVLinkMessage;
 import dji.v5.ux.MAVLink.common.msg_command_long;
@@ -118,15 +125,15 @@ public class MAVLinkReceiver {
     private int wpState = 0;
     private DefaultLayoutActivity parent;
     //private WaypointMission.Builder mBuilder;
-    private ArrayList<msg_mission_item> mMissionItemList;
-    private ArrayList<msg_mission_item_int> mMissionItemintList;
-    private ArrayList<WaypointInfoModel> mWLIMList=new ArrayList<>();
+
+    private WpMissionManager wpMissionManager;
     private boolean isHome = true;
 
 
     public MAVLinkReceiver(DefaultLayoutActivity parent, DroneModel model) {
         this.parent = parent;
         this.mModel = model;
+        wpMissionManager = new WpMissionManager(this, model);
     }
 
     public void process(MAVLinkMessage msg) {
@@ -414,13 +421,12 @@ public class MAVLinkReceiver {
                 }
 
 
-                generateNewMission();//카운트를 최초 수신하고 나면 빈 미션을 하나 만들어 줘야
                 Log.d(TAG, "Expect: Mission Counter: " + msg_count.count);
 
                 mNumGCSWaypoints = msg_count.count;//받을 아이템 갯수 먼저 마브링크 리시버 내에 저장
                 wpState = WP_STATE_REQ_WP;//현재 웨이포인트 관련 진행상황 저장
-                mMissionItemList = new ArrayList<msg_mission_item>();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
-
+                wpMissionManager.iniMissionItemListt();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
+                wpMissionManager.initmWLIMList();//미션 아이템 메시지를 바탕으로 웨이포인트인포모델을 만들 어레이를 하나 초기화
 
                 Log.d(TAG, "Mission REQ: 0...");
                 mModel.request_mission_item(0);//카운트 수신했으니 0번 아이템 요청
@@ -438,11 +444,11 @@ public class MAVLinkReceiver {
                     break;
                 }
 
-                if (mMissionItemList == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
+                if (wpMissionManager.getmMissionItemintList() == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
                     Log.d(TAG, "Error Sequence error!");
                     mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);//gcs에 ACk전송
                 } else {
-                    mMissionItemintList.add(msg_item);//아이템을 리스트에 담음
+                    wpMissionManager.getmMissionItemintList().add(msg_item);//아이템을 리스트에 담음
                     if (msg_item.seq == mNumGCSWaypoints - 1) {// seq값이 (count-1) 과 같다면 == 마지막 아이템이라면
                         wpState = WP_STATE_INACTIVE;
                         finalizeNewMission();
@@ -464,11 +470,11 @@ public class MAVLinkReceiver {
                     break;
                 }
 
-                if (mMissionItemList == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
+                if (wpMissionManager.getmMissionItemList() == null) {//아이템 리스트가 선언되어 있지 않다면 == 카운트를 받지 않았다면
                     Log.d(TAG, "Error Sequence error!");
                     mModel.send_command_ack(MAVLINK_MSG_ID_MISSION_ACK, MAV_RESULT.MAV_RESULT_DENIED);//gcs에 ACk전송
                 } else {
-                    mMissionItemList.add(msg_item);//아이템을 리스트에 담음
+                    wpMissionManager.getmMissionItemList().add(msg_item);//아이템을 리스트에 담음
                     if (msg_item.seq == mNumGCSWaypoints - 1) {// seq값이 (count-1) 과 같다면 == 마지막 아이템이라면
                         wpState = WP_STATE_INACTIVE;
                         finalizeNewMission();
@@ -545,9 +551,7 @@ public class MAVLinkReceiver {
             case MAVLINK_MSG_ID_MISSION_CLEAR_ALL:
                 Log.d(TAG, "MSN: received clear_all from GCS");
 
-                if (mMissionItemList != null) {
-                    mMissionItemList = null;
-                }
+
 //                WaypointMission ym = mModel.getWaypointMissionOperator().getLoadedMission();
 //                if (ym != null) {
 //                    ym.getWaypointList().clear();
@@ -591,43 +595,24 @@ public class MAVLinkReceiver {
 //    }
 //
 //    // Generate a new Mission element, with default speed...
-    protected void generateNewMission() {//빈 미션 하나를 만들어 줌
 
-
-        if (mWLIMList != null) {
-            mWLIMList.clear();
-        }
-
-
-//        mBuilder = new WaypointMission.Builder().
-//                autoFlightSpeed(m_autoFlightSpeed).
-//                maxFlightSpeed(m_maxFlightSpeed).
-//                setExitMissionOnRCSignalLostEnabled(false).
-//                finishedAction(WaypointMissionFinishedAction.NO_ACTION).
-//                gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY).
-//                headingMode(WaypointMissionHeadingMode.AUTO).
-//                repeatTimes(1);
-//
-//        if (curvedFlightPath) {
-//            mBuilder.flightPathMode(WaypointMissionFlightPathMode.CURVED);
-//        } else {
-//            mBuilder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
-//        }
-    }
 
     //
     protected void finalizeNewMission() {
         ArrayList<WaylineWaypoint> dji_wps = new ArrayList<WaylineWaypoint>();
-        WaylineWaypoint currentWLWP = null;
 
-//        for (int i = 0; i < mMissionItemList.size(); i++) {
-//            mMissionItemList.get(i);//
-//            WaypointInfoModel wpInfomodel = new WaypointInfoModel();
-//            WaylineWaypoint waypoint = new WaylineWaypoint();
-//            waypoint.setWaypointIndex(i);//첫 웨이포인트 미션 생성할거니까
-//        }
+        wpMissionManager.generateWLIMlist();//받은 웨이포인트미션 아이템 메시지를 바탕으로 웨이포인트 인포 모델을 만들고 그것들을 리스트에 담음
+        wpMissionManager.saveKMZfile();//만들어진 웨이포인트 인포 모델을 활용하여 kmz파일을 생성
+        mModel.uploadKMZfile(mModel);
+        mModel.send_mission_ack(MAV_MISSION_ACCEPTED);
 
-        mModel.send_mission_ack(MAV_RESULT.MAV_RESULT_ACCEPTED);
+
+
+
+
+
+
+
 
 
 //        Log.d(TAG, "==============================");
