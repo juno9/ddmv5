@@ -128,6 +128,7 @@ import dji.v5.ux.mapkit.core.maps.DJIUiSettings;
 import dji.v5.ux.sample.util.DroneModel;
 import dji.v5.ux.sample.util.MAVLinkReceiver;
 import dji.v5.ux.sample.util.MAVParam;
+import dji.v5.ux.sample.util.WpMissionManager;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
 import dji.v5.ux.visualcamera.CameraNDVIPanelWidget;
 import dji.v5.ux.visualcamera.CameraVisiblePanelWidget;
@@ -179,6 +180,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     };
     DroneModel mModel;
     MAVLinkReceiver mReceiver;
+    WpMissionManager wpMissionmanager;
     public static boolean FLAG_TELEMETRY_ADDRESS_CHANGED = false;
     private Parser mMavlinkParser;
     private DatagramSocket socket;
@@ -264,7 +266,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
 
+
+
         mReceiver = new MAVLinkReceiver(this, mModel);
+
+        wpMissionmanager=new WpMissionManager(mReceiver,mModel,this);
+        mReceiver.setWpMissionManager(wpMissionmanager);
+
         mGCSCommunicator = new GCSCommunicatorAsyncTask(this);
         mGCSCommunicator.execute();
     }

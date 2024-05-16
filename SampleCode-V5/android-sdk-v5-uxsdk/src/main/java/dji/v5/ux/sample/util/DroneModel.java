@@ -11,6 +11,7 @@ import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI_WRISTBAND;
 import static dji.v5.ux.MAVLink.common.msg_set_position_target_global_int.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM;
+import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_NAV_TAKEOFF;
 import static dji.v5.ux.MAVLink.enums.MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1;
 import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 
@@ -50,6 +51,7 @@ import dji.sdk.keyvalue.key.GimbalKey;
 import dji.sdk.keyvalue.key.KeyTools;
 import dji.sdk.keyvalue.key.RemoteControllerKey;
 import dji.sdk.keyvalue.value.common.Attitude;
+import dji.sdk.keyvalue.value.common.EmptyMsg;
 import dji.sdk.keyvalue.value.common.LocationCoordinate2D;
 import dji.sdk.keyvalue.value.common.LocationCoordinate3D;
 import dji.sdk.keyvalue.value.common.Velocity3D;
@@ -69,7 +71,12 @@ import dji.sdk.keyvalue.value.remotecontroller.ControlMode;
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.common.error.IDJIError;
 import dji.v5.manager.KeyManager;
+import dji.v5.manager.aircraft.waypoint3.WaylineExecutingInfoListener;
+import dji.v5.manager.aircraft.waypoint3.WaypointActionListener;
+import dji.v5.manager.aircraft.waypoint3.WaypointMissionExecuteStateListener;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
+import dji.v5.manager.aircraft.waypoint3.model.WaylineExecutingInfo;
+import dji.v5.manager.aircraft.waypoint3.model.WaypointMissionExecuteState;
 import dji.v5.manager.interfaces.IKeyManager;
 import dji.v5.utils.common.ContextUtil;
 import dji.v5.utils.common.DiskUtil;
@@ -192,7 +199,34 @@ public class DroneModel {
         });
 
     }
+    void do_takeoff(float alt) {
+        mAutonomy = false;
+        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyTakeoffLocationAltitude), (double) alt, new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("set takeoff alt : " + String.valueOf(alt));
+            }
 
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("Error setting takeoff alt " + idjiError.description().toString());
+            }
+        });//이륙할 고도를 먼저 세팅
+        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyStartTakeoff), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
+                    @Override
+                    public void onSuccess(EmptyMsg emptyMsg) {
+                        parent.Log("start takeoff success ");
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull IDJIError idjiError) {
+                        parent.Log("takeoff failed " + idjiError.description().toString());
+                    }
+                });
+
+
+                Log.d(TAG, "Takeoff started...");
+    }
     private void send_heartbeat() {
 
         msg_heartbeat msg = new msg_heartbeat();
@@ -1099,22 +1133,24 @@ public class DroneModel {
         sendMessage(msg);
     }
 
-    public void uploadKMZfile(DroneModel model) {
+    public void uploadKMZfile(DroneModel model, String path) {
+        this.kmzOutPath = path;
+
         WaypointMissionManager.getInstance().pushKMZFileToAircraft(kmzOutPath, new CommonCallbacks.CompletionCallbackWithProgress<Double>() {
             @Override
             public void onProgressUpdate(Double aDouble) {
-                Log.i(TAG,"uploading");
+                Log.i(TAG, "uploading");
             }
 
             @Override
             public void onSuccess() {
-               Log.i(TAG,"success");
-               toastinMain("uploadsuccess");
+                Log.i(TAG, "Upload success!\npath : "+path);
+                toastinMain("Upload success!\npath : "+path);
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                Log.i(TAG,"upload failed");
+                Log.i(TAG, "upload failed");
             }
         });
     }
@@ -1191,7 +1227,64 @@ public class DroneModel {
 //        msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
 //        sendMessage(msg);
 //    }
-//    void startWaypointMission() {
+
+    //웨이포인트 미션 시작 메소드
+    public void startWaypointMission() {
+
+        Log.i(TAG,WaypointMissionManager.getInstance().getAvailableWaylineIDs("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint").toString());
+       //임무 종료시 리스너 지워야 하는데 임무 종료 시점을 특정하지 못해 일단은 리스너들주석처리 해 둔 상태
+//        WaypointMissionManager.getInstance().addWaylineExecutingInfoListener(new WaylineExecutingInfoListener() {
+//            @Override
+//            public void onWaylineExecutingInfoUpdate(WaylineExecutingInfo excutingWaylineInfo) {
+//                Log.i(TAG,"excutingWaylineInfo waylineID : "+excutingWaylineInfo.getWaylineID()+"\nmissionfile name : "+excutingWaylineInfo.getMissionFileName()+"\nCurrentWaypointIndex : "+excutingWaylineInfo.getCurrentWaypointIndex() );
+//            }
+//
+//            @Override
+//            public void onWaylineExecutingInterruptReasonUpdate(IDJIError error) {
+//                Log.i(TAG,"WaylineExecutingInterruptReason : "+error.toString());
+//            }
+//        });
+//        WaypointMissionManager.getInstance().addWaypointMissionExecuteStateListener(new WaypointMissionExecuteStateListener() {
+//            @Override
+//            public void onMissionStateUpdate(WaypointMissionExecuteState missionState) {
+//                Log.i(TAG,"onMissionStateUpdate : "+missionState.toString());
+//            }
+//        });
+//        WaypointMissionManager.getInstance().addWaypointActionListener(new WaypointActionListener() {
+//            @Override
+//            public void onExecutionStart(int actionId) {
+//                Log.i(TAG,"onExecutionStart actionId : "+actionId);
+//            }
+//
+//            @Override
+//            public void onExecutionFinish(int actionId, @Nullable IDJIError error) {
+//                Log.i(TAG,"onExecutionFinish error : "+error.toString());
+//            }
+//
+//            @Override
+//            public void onExecutionStart(int actionGroup, int actionId) {
+//                Log.i(TAG,"onExecutionStart actionGroup : "+actionGroup+" actionId : "+actionId);
+//            }
+//
+//            @Override
+//            public void onExecutionFinish(int actionGroup, int actionId, @Nullable IDJIError error) {
+//                Log.i(TAG,"onExecutionFinish actionGroup : "+actionGroup+" actionId : "+actionId+"error : "+error.toString());
+//            }
+//        });
+        WaypointMissionManager.getInstance().startMission(kmzOutPath, new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                Log.i(TAG,"WayPoint Mission Started");
+
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                Log.i(TAG,"sarting WPM failed : "+idjiError.description().toString());
+
+            }
+        });
+
 //        mAutonomy = false;
 //        //parent.LogMessageDJI("start WaypointMission()");
 //
@@ -1214,12 +1307,250 @@ public class DroneModel {
 //                    //parent.LogMessageDJI("Error: " + djiError.toString());
 //                    // TODO: 여기서 start image interval 할지, 데이터 들어오는 고도 체킹해서 할지 MAV_CMD_IMAGE_START_CAPTURE 동작 유무 확인 후 수행.
 //                    //        this.mDrone.do_set_Gimbal(9, 120);
-//                } else
-//                    //parent.LogMessageDJI("Mission started!");
+//                } else {//parent.LogMessageDJI("Mission started!");
+//                }
 //            });
 //        }
-//    }
+    }
+
+//    public void startImageCaptureIntervalControl(/*float paramInterval*/) {
+//        safeSleep(100);
 //
+//        // MAV_CMD_IMAGE_START_CAPTURE 이 포함되어있었다면, 인터벌 컨트롤로 인지하여 수행됨.
+//        if (isIntervalControl()) {
+//            if (djiAircraft.getCamera() != null) {
+//
+//                this.doSetGimbalDown(9, -90);
+//
+//                safeSleep(100);
+//
+//
+//                // 카메라 모드를 포토로 설정.
+//                djiAircraft.getCamera().setMode(SettingsDefinitions.CameraMode.SHOOT_PHOTO, djiError -> {
+//                    if (djiError != null) {
+//                        parent.logMessageDJI("Error Setting PhotoMode: " + djiError.toString());
+//                        SetCustomMesasageBox("1 [setMode Error]", djiError.toString());
+//                    } else {
+//                        SetCustomMesasageBox("1 [setMode Success]", "setMode Success.");
+//                    }
+//                });
+//                djiAircraft.getCamera().setPhotoFileFormat(SettingsDefinitions.PhotoFileFormat.JPEG, djiError -> {
+//                    if (djiError != null) {
+//                        parent.logMessageDJI("Error Setting RAW_AND_JPEG: " + djiError.toString());
+//                        SetCustomMesasageBox("3 [setPhotoFileFormat Error]", djiError.toString());
+//                    } else {
+//                        SetCustomMesasageBox("[setPhotoFileFormat Success]", "setPhotoFileFormat Success.");
+//                    }
+//                });
+////                djiAircraft.getCamera().file
+//
+//                if (djiAircraft.getCamera().isFlatCameraModeSupported()) {
+//                    djiAircraft.getCamera().setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL, djiError -> {
+//                        if (djiError != null) {
+//                            parent.logMessageDJI("Error Setting PhotoMode: " + djiError.toString());
+//                            SetCustomMesasageBox("2 [setFlatMode Error]", djiError.toString());
+//                        } else {
+//                            SetCustomMesasageBox("1 [setFlatMode Success]", "setFlatMode Success.");
+//                        }
+//                    });
+//                }
+//                //  PHOTO>Intelligent Flight Mode>Hyperlapse>2
+//                //                SettingsDefinitions.FileType.JPEG
+//                //  파일 캡쳐 형식 JPEG 2초이상  / RAW 5초이상 설정
+////                djiAircraft.getCamera().setPhotoFileFormat(SettingsDefinitions.PhotoFileFormat.JPEG, djiError -> {
+////                    if (djiError != null) {
+////                        parent.logMessageDJI("Error Setting RAW_AND_JPEG: " + djiError.toString());
+////                        SetCustomMesasageBox("3 [setPhotoFileFormat Error]", djiError.toString());
+////                    } else {
+//                SettingsDefinitions.ShootPhotoMode photoMode = SettingsDefinitions.ShootPhotoMode.INTERVAL;
+//                djiAircraft.getCamera().setShootPhotoMode(photoMode, djiError2 -> {
+//                    if (djiError2 == null) {
+//                        SetCustomMesasageBox("3 [setShootPhotoMode Success]", "setShootPhotoMode Success.");
+//
+//                        int shootInterval = Math.round(this.getCaptureInterval()); // 반올림한다.
+//                        Log.e(TAG, "startImageCaptureIntervalControl round shootInterval " + shootInterval);
+//                        Log.e(TAG, "startImageCaptureIntervalControl origin paramInterval " + this.getCaptureInterval());
+//
+//                        SettingsDefinitions.PhotoTimeIntervalSettings mSettings = new SettingsDefinitions.PhotoTimeIntervalSettings(255, shootInterval);
+//                        djiAircraft.getCamera().setPhotoTimeIntervalSettings(mSettings, djiError3 -> {
+//                            if (djiError3 == null) {
+//                                parent.logMessageDJI("Camera interval set to " + mSettings.getTimeIntervalInSeconds() + " seconds");
+//                                SetCustomMesasageBox("4 [setPhotoTimeIntervalSettings Success]", "setPhotoTimeIntervalSettings Success.");
+//
+//                                photoTaken = false;
+//                                photoTakenError = false;
+//
+//                                // setCameraVideoStreamSource
+//                                /**
+//                                 * 카메라 비디오 스트림 소스를 설정합니다. 다중 렌즈 카메라의 경우 카메라 스트림의 소스가 다릅니다. DJICameraVideoStreamSource카메라 비디오 스트림 소스를 나타내는 데 사용됩니다.
+//                                 * 카메라 비디오 스트림의 소스가 설정되면 현재 라이브 뷰 스트림도 해당 소스로 변경됩니다. 젠뮤즈 H20/H20T에서만 지원됩니다.
+//                                 */
+//                                djiAircraft.getCamera().startShootPhoto(djiError4 -> {
+//                                    if (djiError4 == null) {
+//                                        parent.logMessageDJI("Requested Photo");
+///*
+//                    msg_camera_image_captured msg = new msg_camera_image_captured();
+//                    msg.lat = (int)(mLatitude*10000000);
+//                    msg.lon = (int)(mLongitude*10000000);
+//                    msg.alt = (int)mAlt;
+//                    msg.camera_id=0;
+//                    msg.image_index=0;
+//                    msg.capture_result = 1;
+//                    sendMessage(msg);
+//  */
+//                                        //send_command_ack(MAV_CMD_DO_SET_PARAMETER, MAV_RESULT.MAV_RESULT_ACCEPTED);
+//                                        send_command_ack(MAV_CMD_DO_DIGICAM_CONTROL, MAV_RESULT.MAV_RESULT_ACCEPTED);
+//                                        SetCustomMesasageBox("5 [startShootPhoto Capture!]", "startShootPhoto Success.");
+//
+//                                        safeSleep(500);
+//                                        startWaypointMission();
+//
+//                                    } else {
+//                                        parent.logMessageDJI("Error requesting photo: " + djiError4.toString());
+//                                        SetCustomMesasageBox("5 [startShootPhoto Error]", djiError4.toString());
+//                                        // try again
+////                                                takePhoto();
+//                                    }
+//                                });
+//
+//
+//                            } else {
+//                                parent.logMessageDJI("ERROR! Message: " + djiError3.getDescription());
+//                                SetCustomMesasageBox("4 [setPhotoTimeIntervalSettings Error]", djiError3.toString());
+//                            }
+//                        });
+//
+//                    } else {
+//                        parent.logMessageDJI("ERROR! Message: " + djiError2.getDescription());
+//                    }
+//                });
+//
+////                    }
+////                });
+//
+//            }
+//        }
+//    }
+
+    public void startImageCaptureIntervalControl(/*float paramInterval*/) {
+//        safeSleep(100);
+//
+//        // MAV_CMD_IMAGE_START_CAPTURE 이 포함되어있었다면, 인터벌 컨트롤로 인지하여 수행됨.
+//        if (isIntervalControl()) {
+//            if (djiAircraft.getCamera() != null) {
+//
+//                this.doSetGimbalDown(9, -90);
+//
+//                safeSleep(100);
+//
+//
+//                // 카메라 모드를 포토로 설정.
+//                djiAircraft.getCamera().setMode(SettingsDefinitions.CameraMode.SHOOT_PHOTO, djiError -> {
+//                    if (djiError != null) {
+//                        parent.logMessageDJI("Error Setting PhotoMode: " + djiError.toString());
+//                        SetCustomMesasageBox("1 [setMode Error]", djiError.toString());
+//                    } else {
+//                        SetCustomMesasageBox("1 [setMode Success]", "setMode Success.");
+//                    }
+//                });
+//                djiAircraft.getCamera().setPhotoFileFormat(SettingsDefinitions.PhotoFileFormat.JPEG, djiError -> {
+//                    if (djiError != null) {
+//                        parent.logMessageDJI("Error Setting RAW_AND_JPEG: " + djiError.toString());
+//                        SetCustomMesasageBox("3 [setPhotoFileFormat Error]", djiError.toString());
+//                    } else {
+//                        SetCustomMesasageBox("[setPhotoFileFormat Success]", "setPhotoFileFormat Success.");
+//                    }
+//                });
+////                djiAircraft.getCamera().file
+//
+//                if (djiAircraft.getCamera().isFlatCameraModeSupported()) {
+//                    djiAircraft.getCamera().setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL, djiError -> {
+//                        if (djiError != null) {
+//                            parent.logMessageDJI("Error Setting PhotoMode: " + djiError.toString());
+//                            SetCustomMesasageBox("2 [setFlatMode Error]", djiError.toString());
+//                        } else {
+//                            SetCustomMesasageBox("1 [setFlatMode Success]", "setFlatMode Success.");
+//                        }
+//                    });
+//                }
+//                //  PHOTO>Intelligent Flight Mode>Hyperlapse>2
+//                //                SettingsDefinitions.FileType.JPEG
+//                //  파일 캡쳐 형식 JPEG 2초이상  / RAW 5초이상 설정
+////                djiAircraft.getCamera().setPhotoFileFormat(SettingsDefinitions.PhotoFileFormat.JPEG, djiError -> {
+////                    if (djiError != null) {
+////                        parent.logMessageDJI("Error Setting RAW_AND_JPEG: " + djiError.toString());
+////                        SetCustomMesasageBox("3 [setPhotoFileFormat Error]", djiError.toString());
+////                    } else {
+//                SettingsDefinitions.ShootPhotoMode photoMode = SettingsDefinitions.ShootPhotoMode.INTERVAL;
+//                djiAircraft.getCamera().setShootPhotoMode(photoMode, djiError2 -> {
+//                    if (djiError2 == null) {
+//                        SetCustomMesasageBox("3 [setShootPhotoMode Success]", "setShootPhotoMode Success.");
+//
+//                        int shootInterval = Math.round(this.getCaptureInterval()); // 반올림한다.
+//                        Log.e(TAG, "startImageCaptureIntervalControl round shootInterval " + shootInterval);
+//                        Log.e(TAG, "startImageCaptureIntervalControl origin paramInterval " + this.getCaptureInterval());
+//
+//                        SettingsDefinitions.PhotoTimeIntervalSettings mSettings = new SettingsDefinitions.PhotoTimeIntervalSettings(255, shootInterval);
+//                        djiAircraft.getCamera().setPhotoTimeIntervalSettings(mSettings, djiError3 -> {
+//                            if (djiError3 == null) {
+//                                parent.logMessageDJI("Camera interval set to " + mSettings.getTimeIntervalInSeconds() + " seconds");
+//                                SetCustomMesasageBox("4 [setPhotoTimeIntervalSettings Success]", "setPhotoTimeIntervalSettings Success.");
+//
+//                                photoTaken = false;
+//                                photoTakenError = false;
+//
+//                                // setCameraVideoStreamSource
+//                                /**
+//                                 * 카메라 비디오 스트림 소스를 설정합니다. 다중 렌즈 카메라의 경우 카메라 스트림의 소스가 다릅니다. DJICameraVideoStreamSource카메라 비디오 스트림 소스를 나타내는 데 사용됩니다.
+//                                 * 카메라 비디오 스트림의 소스가 설정되면 현재 라이브 뷰 스트림도 해당 소스로 변경됩니다. 젠뮤즈 H20/H20T에서만 지원됩니다.
+//                                 */
+//                                djiAircraft.getCamera().startShootPhoto(djiError4 -> {
+//                                    if (djiError4 == null) {
+//                                        parent.logMessageDJI("Requested Photo");
+///*
+//                    msg_camera_image_captured msg = new msg_camera_image_captured();
+//                    msg.lat = (int)(mLatitude*10000000);
+//                    msg.lon = (int)(mLongitude*10000000);
+//                    msg.alt = (int)mAlt;
+//                    msg.camera_id=0;
+//                    msg.image_index=0;
+//                    msg.capture_result = 1;
+//                    sendMessage(msg);
+//  */
+//                                        //send_command_ack(MAV_CMD_DO_SET_PARAMETER, MAV_RESULT.MAV_RESULT_ACCEPTED);
+//                                        send_command_ack(MAV_CMD_DO_DIGICAM_CONTROL, MAV_RESULT.MAV_RESULT_ACCEPTED);
+//                                        SetCustomMesasageBox("5 [startShootPhoto Capture!]", "startShootPhoto Success.");
+//
+//                                        safeSleep(500);
+//                                        startWaypointMission();
+//
+//                                    } else {
+//                                        parent.logMessageDJI("Error requesting photo: " + djiError4.toString());
+//                                        SetCustomMesasageBox("5 [startShootPhoto Error]", djiError4.toString());
+//                                        // try again
+////                                                takePhoto();
+//                                    }
+//                                });
+//
+//
+//                            } else {
+//                                parent.logMessageDJI("ERROR! Message: " + djiError3.getDescription());
+//                                SetCustomMesasageBox("4 [setPhotoTimeIntervalSettings Error]", djiError3.toString());
+//                            }
+//                        });
+//
+//                    } else {
+//                        parent.logMessageDJI("ERROR! Message: " + djiError2.getDescription());
+//                    }
+//                });
+//
+////                    }
+////                });
+//
+//            }
+//        }
+    }
+
 //    public void stopWaypointMission() {
 //        mAutonomy = false;
 //        if (getWaypointMissionOperator() == null) {
@@ -1295,6 +1626,9 @@ public class DroneModel {
         sendMessage(msg);
     }
 
+    public boolean isIntervalControl() {
+        return this.doImageInterval;
+    }
 
     public void listen3DLocation() {
         KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyAircraftLocation3D), this, new CommonCallbacks.KeyListener<LocationCoordinate3D>() {
@@ -1713,9 +2047,10 @@ public class DroneModel {
     String WAYPOINT_SAMPLE_FILE_NAME = "waypointsample.kmz";
     String WAYPOINT_SAMPLE_FILE_DIR = "waypoint/";
     String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
-    String kmzOutPath = rootDir + "generate_test.kmz";
+    String kmzOutPath;
 
     boolean missionUploaded;
+
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();
