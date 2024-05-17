@@ -240,8 +240,8 @@ public class MAVLinkReceiver {
 //                        break;
                     case MAV_CMD_MISSION_START:
 //                        if( !mModel.isIntervalControl() ) {
-                        Log.i(TAG,"mission_start_Message_taken");
-                            mModel.startWaypointMission();
+                        Log.i(TAG, "mission_start_Message_taken");
+                        mModel.startWaypointMission();
 //                        } else {
 //                            mModel.startImageCaptureIntervalControl();
 //                        }
@@ -428,7 +428,7 @@ public class MAVLinkReceiver {
 
                 mNumGCSWaypoints = msg_count.count;//받을 아이템 갯수 먼저 마브링크 리시버 내에 저장
                 wpState = WP_STATE_REQ_WP;//현재 웨이포인트 관련 진행상황 저장
-                wpMissionManager.iniMissionItemListt();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
+                wpMissionManager.iniMissionItemList();//전달받은 미션 아이템 메시지를 담아둘 어레이 하나 초기화
                 wpMissionManager.initmWLIMList();//미션 아이템 메시지를 바탕으로 웨이포인트인포모델을 만들 어레이를 하나 초기화
 
                 Log.d(TAG, "Mission REQ: 0...");
@@ -553,7 +553,7 @@ public class MAVLinkReceiver {
             // Clear all mission states...
             case MAVLINK_MSG_ID_MISSION_CLEAR_ALL:
                 Log.d(TAG, "MSN: received clear_all from GCS");
-
+               // wpMissionManager.getmMissionItemList().clear();
 
 //                WaypointMission ym = mModel.getWaypointMissionOperator().getLoadedMission();
 //                if (ym != null) {
@@ -608,11 +608,11 @@ public class MAVLinkReceiver {
     protected void finalizeNewMission() {
         ArrayList<WaylineWaypoint> dji_wps = new ArrayList<WaylineWaypoint>();
 
+
         wpMissionManager.generateWLIMlist();//받은 웨이포인트미션 아이템 메시지를 바탕으로 웨이포인트 인포 모델을 만들고 그것들을 리스트에 담음
         wpMissionManager.saveKMZfile();//만들어진 웨이포인트 인포 모델을 활용하여 kmz파일을 생성
-        kmzOutPath=wpMissionManager.getKmzOutPath();//만들어 둔
-        mModel.uploadKMZfile(mModel,kmzOutPath);
-        mModel.send_mission_ack(MAV_MISSION_ACCEPTED);
+        kmzOutPath = wpMissionManager.getKmzOutPath();//만들어 둔
+        mModel.uploadKMZfile(mModel, kmzOutPath);
 
 
 //

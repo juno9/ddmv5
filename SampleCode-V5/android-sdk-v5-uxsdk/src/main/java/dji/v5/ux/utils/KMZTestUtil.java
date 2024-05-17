@@ -61,6 +61,7 @@ public class KMZTestUtil {
     public static final WaylinePositioningType DEF_POSITION_TYPE = WaylinePositioningType.GPS;
     public static final WaylineAltitudeMode DEF_ALTITUDE_MODE = WaylineAltitudeMode.RELATIVE_TO_START_POINT;
     public static final Double DEF_PITCH_ANGLE = -30d;
+    public static final Double DEF_YAW_ANGLE = 0d;
 
     public KMZTestUtil(){}
 
@@ -194,6 +195,8 @@ public class KMZTestUtil {
                 return transStopRecord();
             case GIMBAL_PITCH:
                 return transGimbalPitch();
+            case GIMBAL_YAW:
+                return transGimbalYaw();
             default:
                 return null;
 
@@ -207,6 +210,19 @@ public class KMZTestUtil {
         ActionGimbalRotateParam param = new ActionGimbalRotateParam();
         param.setEnablePitch(true);
         param.setPitch(DEF_PITCH_ANGLE);
+        param.setRotateMode(WaylineGimbalActuatorRotateMode.ABSOLUTE_ANGLE);
+        param.setPayloadPositionIndex(0);
+        info.setGimbalRotateParam(param);
+        return info;
+    }
+
+    private static WaylineActionInfo transGimbalYaw() {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.GIMBAL_ROTATE);
+
+        ActionGimbalRotateParam param = new ActionGimbalRotateParam();
+        param.setEnablePitch(true);
+        param.setYaw(DEF_YAW_ANGLE);
         param.setRotateMode(WaylineGimbalActuatorRotateMode.ABSOLUTE_ANGLE);
         param.setPayloadPositionIndex(0);
         info.setGimbalRotateParam(param);

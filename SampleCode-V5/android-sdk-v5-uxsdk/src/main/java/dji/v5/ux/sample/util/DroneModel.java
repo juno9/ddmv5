@@ -9,6 +9,7 @@ import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_LIMITED;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.FARMING;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI_WRISTBAND;
+import static dji.v5.ux.MAVLink.common.msg_mission_ack.MAVLINK_MSG_ID_MISSION_ACK;
 import static dji.v5.ux.MAVLink.common.msg_set_position_target_global_int.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM;
 import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_NAV_TAKEOFF;
@@ -199,6 +200,7 @@ public class DroneModel {
         });
 
     }
+
     void do_takeoff(float alt) {
         mAutonomy = false;
         KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyTakeoffLocationAltitude), (double) alt, new CommonCallbacks.CompletionCallback() {
@@ -213,20 +215,19 @@ public class DroneModel {
             }
         });//이륙할 고도를 먼저 세팅
         KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyStartTakeoff), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
-                    @Override
-                    public void onSuccess(EmptyMsg emptyMsg) {
-                        parent.Log("start takeoff success ");
-                    }
+            @Override
+            public void onSuccess(EmptyMsg emptyMsg) {
+                parent.Log("start takeoff success ");
+            }
 
-                    @Override
-                    public void onFailure(@NonNull IDJIError idjiError) {
-                        parent.Log("takeoff failed " + idjiError.description().toString());
-                    }
-                });
-
-
-                Log.d(TAG, "Takeoff started...");
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("takeoff failed " + idjiError.description().toString());
+            }
+        });
+        Log.d(TAG, "Takeoff started...");
     }
+
     private void send_heartbeat() {
 
         msg_heartbeat msg = new msg_heartbeat();
@@ -1076,22 +1077,22 @@ public class DroneModel {
 
         MAVLinkPacket packet = msg.pack();
 
-        packet.sysid = mSystemId;
-        packet.compid = MAV_COMP_ID_AUTOPILOT1;
+        if (packet.msgid == MAVLINK_MSG_ID_MISSION_ACK) {
+            packet.sysid = mSystemId;
+            Log.i(TAG, "패킷 시스템 id지정");
+            packet.compid = MAV_COMP_ID_AUTOPILOT1;
+            Log.i(TAG, "패킷 컴포넌트 id지정");
+            byte[] bytes = packet.encodePacket();
 
-        byte[] bytes = packet.encodePacket();
-
-        try {
-            if (!this.isTcpWorker) {
-                DatagramPacket p = new DatagramPacket(bytes, bytes.length, socket.getInetAddress(), socket.getPort());
-                socket.send(p);
-
-
-                if (secondarySocket != null) {
-                    DatagramPacket secondaryPacket = new DatagramPacket(bytes, bytes.length, secondarySocket.getInetAddress(), secondarySocket.getPort());
-                    secondarySocket.send(secondaryPacket);
+            try {
+                if (!this.isTcpWorker) {
+                    DatagramPacket p = new DatagramPacket(bytes, bytes.length, socket.getInetAddress(), socket.getPort());
+                    socket.send(p);
+                    if (secondarySocket != null) {
+                        DatagramPacket secondaryPacket = new DatagramPacket(bytes, bytes.length, secondarySocket.getInetAddress(), secondarySocket.getPort());
+                        secondarySocket.send(secondaryPacket);
 //                ////parent.Log("SECONDARY PACKET SENT");
-                }
+                    }
 //            if(msg.msgid != MAVLINK_MSG_ID_POWER_STATUS &&
 //                    msg.msgid != MAVLINK_MSG_ID_SYS_STATUS &&
 //                    msg.msgid != MAVLINK_MSG_ID_VIBRATION &&
@@ -1101,35 +1102,87 @@ public class DroneModel {
 //                    msg.msgid != MAVLINK_MSG_ID_GPS_RAW_INT &&
 //                    msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS)
 //                //parent.LogMessageToGCS(msg.toString());
-                // //parent.Log("UDP Send :"+msg.toString());
-            } else {
+                    // //parent.Log("UDP Send :"+msg.toString());
+                } else {
+                    // TODO TCP Send
+                    OutputStream os = this.mTcpSocket.getOutputStream();
+                    Log.i(TAG, "아웃풋 스트림 지정");
 
-                // TODO TCP Send
-                OutputStream os = this.mTcpSocket.getOutputStream();
+                    os.write(bytes);
+                    Log.i(TAG, "아웃풋 스트림에 바이트 데이터 입력");
+                    os.flush();
+                    Log.i(TAG, "아웃풋 스트림에 흘려보냄");
+//                Log.d(TAG, "Confirm, TCP Packet Config IP : {}, Port : {} Received-IP:"+ this.mIsa.getAddress() + " / Received-localport:" +  this.mIsa.getPort());
 
+                    // //parent.Log("TCP Send :" + msg.toString());
+                }
+
+            } catch (PortUnreachableException ignored) {
+
+            } catch (IOException e) {
+//            Log.d(TAG, "Write Error ::");
+            }
+        } else {
+            packet.sysid = mSystemId;
+
+            packet.compid = MAV_COMP_ID_AUTOPILOT1;
+
+            byte[] bytes = packet.encodePacket();
+
+            try {
+                if (!this.isTcpWorker) {
+                    DatagramPacket p = new DatagramPacket(bytes, bytes.length, socket.getInetAddress(), socket.getPort());
+                    socket.send(p);
+
+
+                    if (secondarySocket != null) {
+                        DatagramPacket secondaryPacket = new DatagramPacket(bytes, bytes.length, secondarySocket.getInetAddress(), secondarySocket.getPort());
+                        secondarySocket.send(secondaryPacket);
+//                ////parent.Log("SECONDARY PACKET SENT");
+                    }
+//            if(msg.msgid != MAVLINK_MSG_ID_POWER_STATUS &&
+//                    msg.msgid != MAVLINK_MSG_ID_SYS_STATUS &&
+//                    msg.msgid != MAVLINK_MSG_ID_VIBRATION &&
+//                    msg.msgid != MAVLINK_MSG_ID_ATTITUDE &&
+//                    msg.msgid != MAVLINK_MSG_ID_VFR_HUD &&
+//                    msg.msgid != MAVLINK_MSG_ID_GLOBAL_POSITION_INT &&
+//                    msg.msgid != MAVLINK_MSG_ID_GPS_RAW_INT &&
+//                    msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS)
+//                //parent.LogMessageToGCS(msg.toString());
+                    // //parent.Log("UDP Send :"+msg.toString());
+                } else {
+
+                    // TODO TCP Send
+                    OutputStream os = this.mTcpSocket.getOutputStream();
 //                Log.d(TAG, "<<<<<<<<<<<<<<<<< TCP Send Start <<<<<<<<<<<<<<<<<<<<< SysID:" + Integer.valueOf(mSystemId) + " / Port:" +  Integer.valueOf(this.mIsa.getPort()) );
 //                log.info("TcpWorkerLink :: WriteBytes sysID index: {}, targetIp : {}, targetPort : {}", new Object[] { Integer.valueOf(index), targetIp, Integer.valueOf(targetPort) });
 //                Log.d(TAG, "TcpWorkerLink :: Send1  MAVLink TCP Data = "+ bytes + ", length ="+ Integer.valueOf(bytes.length));
-//                InetAddress targetInetAddr = InetAddress.getByName(targetIp);
-                os.write(bytes);
-                os.flush();
+//                InetAddress targetInetAddr = InetAddress.getByName(targetI
+                    os.write(bytes);
+                    os.flush();
+
 //                Log.d(TAG, "Confirm, TCP Packet Config IP : {}, Port : {} Received-IP:"+ this.mIsa.getAddress() + " / Received-localport:" +  this.mIsa.getPort());
 
-                // //parent.Log("TCP Send :" + msg.toString());
+                    // //parent.Log("TCP Send :" + msg.toString());
+                }
+
+            } catch (PortUnreachableException ignored) {
+
+            } catch (IOException e) {
+//            Log.d(TAG, "Write Error ::");
             }
 
-        } catch (PortUnreachableException ignored) {
-
-        } catch (IOException e) {
-//            Log.d(TAG, "Write Error ::");
         }
     }
 
     void send_mission_ack(int status) {
 
         msg_mission_ack msg = new msg_mission_ack();
+        Log.i(TAG, "msg_mission_ack 객체 생성");
         msg.type = (short) status;
+        Log.i(TAG, "msg_mission_ack 타입 지정");
         msg.mission_type = MAV_MISSION_TYPE.MAV_MISSION_TYPE_MISSION;
+        Log.i(TAG, "미션타입 지정");
         sendMessage(msg);
     }
 
@@ -1144,8 +1197,18 @@ public class DroneModel {
 
             @Override
             public void onSuccess() {
-                Log.i(TAG, "Upload success!\npath : "+path);
-                toastinMain("Upload success!\npath : "+path);
+                Log.i(TAG, "Upload success!\npath : " + path);
+                toastinMain("Upload success!\npath : " + path);
+
+                Thread sendMessageThread = new Thread(() -> {
+                    try {
+                        send_mission_ack(MAV_MISSION_ACCEPTED);
+                    } catch (Exception e) {
+                        Log.i(TAG, "exception : "+e.toString());
+                    }
+                });//ack를 보낼 쓰레드를 하나 만들고 실행
+                sendMessageThread.start();
+
             }
 
             @Override
@@ -1231,8 +1294,8 @@ public class DroneModel {
     //웨이포인트 미션 시작 메소드
     public void startWaypointMission() {
 
-        Log.i(TAG,WaypointMissionManager.getInstance().getAvailableWaylineIDs("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint").toString());
-       //임무 종료시 리스너 지워야 하는데 임무 종료 시점을 특정하지 못해 일단은 리스너들주석처리 해 둔 상태
+        Log.i(TAG, WaypointMissionManager.getInstance().getAvailableWaylineIDs("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint").toString());
+        //임무 종료시 리스너 지워야 하는데 임무 종료 시점을 특정하지 못해 일단은 리스너들주석처리 해 둔 상태
 //        WaypointMissionManager.getInstance().addWaylineExecutingInfoListener(new WaylineExecutingInfoListener() {
 //            @Override
 //            public void onWaylineExecutingInfoUpdate(WaylineExecutingInfo excutingWaylineInfo) {
@@ -1274,13 +1337,13 @@ public class DroneModel {
         WaypointMissionManager.getInstance().startMission(kmzOutPath, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                Log.i(TAG,"WayPoint Mission Started");
+                Log.i(TAG, "WayPoint Mission Started");
 
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                Log.i(TAG,"sarting WPM failed : "+idjiError.description().toString());
+                Log.i(TAG, "sarting WPM failed : " + idjiError.description().toString());
 
             }
         });
