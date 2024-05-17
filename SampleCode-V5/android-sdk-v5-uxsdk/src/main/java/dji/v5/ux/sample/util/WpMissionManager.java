@@ -303,7 +303,7 @@ public class WpMissionManager {
 
             waypoint.setWaypointIndex(i);//첫 웨이포인트 미션 생성할거니까
 
-            waypoint.setSpeed((double) msg.param2);//웨이포인트 속도 설정(이거는 메시지에서 어떤 파라미터를 가져와야 하는지 모르겠음)
+
             waypoint.setUseGlobalTurnParam(true);
 
 
@@ -311,6 +311,9 @@ public class WpMissionManager {
             wpInfomodel.setWaylineWaypoint(waypoint);
             wpInfomodel.setActionInfos(actionlist);
             this.mWLIMList.add(i, wpInfomodel);
+
+            Log.i(TAG,this.mWLIMList.get(i).getActionInfos().toString());
+            Log.i(TAG,this.mWLIMList.get(i).getWaylineWaypoint().toString());
             waypoint = null;
         }
 
