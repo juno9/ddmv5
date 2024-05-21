@@ -13,10 +13,13 @@ import com.dji.wpmzsdk.common.data.Template;
 import com.dji.wpmzsdk.manager.WPMZManager;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.zip.ZipEntry;
 
 
 import dji.sdk.keyvalue.value.mission.Waypoint;
@@ -34,9 +37,12 @@ import dji.sdk.wpmz.value.mission.WaylineMissionConfig;
 import dji.sdk.wpmz.value.mission.WaylineWaypoint;
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.common.error.IDJIError;
+import dji.v5.manager.aircraft.waypoint3.WPMZParserManager;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.utils.common.ContextUtil;
 import dji.v5.utils.common.DiskUtil;
+import dji.v5.utils.common.FileUtils;
+import dji.v5.utils.common.LogUtils;
 import dji.v5.ux.MAVLink.common.msg_mission_item;
 import dji.v5.ux.MAVLink.common.msg_mission_item_int;
 import dji.v5.ux.MAVLink.enums.MAV_CMD;
@@ -44,6 +50,11 @@ import dji.v5.ux.MAVLink.enums.MAV_RESULT;
 import dji.v5.ux.sample.showcase.defaultlayout.DefaultLayoutActivity;
 import dji.v5.ux.utils.KMZTestUtil;
 import dji.v5.ux.utils.wpml.WaypointInfoModel;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 
 //미션 매니저 따로 생성하여 미션 목록 관리를 맡겼습니다.
@@ -61,10 +72,12 @@ public class WpMissionManager {
     String unzipDir = "wpmz/";
     String curMissionPath = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME);
     String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
+
     String kmzOutPath = rootDir + "generate_test.kmz";
     DroneModel model;
     int status = 0;
     DefaultLayoutActivity mainActivity;
+    Disposable mDisposable;
 
     public WpMissionManager(MAVLinkReceiver MAVLinkReceiver, DroneModel model, DefaultLayoutActivity defaultLayoutActivity) {
         this.receiver = MAVLinkReceiver;
@@ -169,13 +182,15 @@ public class WpMissionManager {
                     waypoint.setHeight((double) msg.z);//웨이포인트의 고도 설정
                     waypoint.setEllipsoidHeight((double) msg.z);//웨이포인트의 Ellipsoid고도 설정(이 항목이 뭔지 모르나 샘플에서 그냥 고도값을 넣은것을 보고 일단 넣어둠)
 
-
                     if (speedchanged) {
                         waypoint.setSpeed(changedSpeed);
                     }
-
+//                    else {
+//                        waypoint.setSpeed(5.0);
+//                    }
 
                     if (msg.param1 > 0) {//멈춤 시간이 0보다 크면
+                        Log.d(TAG, "Delay : " + msg.param1);
                         WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
                         info.setActionType(WaylineActionType.HOVER);//액션 타입을 호버로 설정
                         ActionAircraftHoverParam param = new ActionAircraftHoverParam();//
@@ -185,6 +200,7 @@ public class WpMissionManager {
                     }
 
                     if (msg.param2 > 0) {//돌리기 각도가 0보다 크면
+                        Log.d(TAG, "Rotate : " + msg.param2);
                         WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
                         info.setActionType(WaylineActionType.ROTATE_YAW);//액션 타입을 돌리기로 설정
                         ActionAircraftHoverParam param = new ActionAircraftHoverParam();//액션 파라미터 객체 생성
@@ -192,16 +208,14 @@ public class WpMissionManager {
                         info.setAircraftHoverParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
                         actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
                     }
-
-
                     break;
 
                 case MAV_CMD.MAV_CMD_DO_CHANGE_SPEED://이 스위치문이 작동한 다음번 아이템 부터는 여기서 설정한 속도가 들어가줘야 한다.
                     Log.d(TAG, "Change Speed: " + msg.x / 10000000.0 + ", " + msg.y / 10000000.0 + " at " + msg.z + " m " + msg.param2 + " Yaw " + msg.param1 + " Delay ");
                     speedchanged = true;
                     if (speedchanged) {
-                        waypoint.setSpeed((double) msg.param1);
-                        changedSpeed = (double) msg.param1;
+                        waypoint.setSpeed((double) msg.param2);
+                        changedSpeed = (double) msg.param2;
                     }
                     break;
 
@@ -227,8 +241,6 @@ public class WpMissionManager {
                             waypoint.setHeight((double) msg.z);
                         }
                     }
-
-
                     break;
 
 
@@ -301,19 +313,17 @@ public class WpMissionManager {
             }
 
 
+            Log.d(TAG, "Speed for mission will be " + waypoint.getSpeed() + " m/s");
+            Log.d(TAG, "==============================");
             waypoint.setWaypointIndex(i);//첫 웨이포인트 미션 생성할거니까
-
-
             waypoint.setUseGlobalTurnParam(true);
-
-
             WaypointInfoModel wpInfomodel = new WaypointInfoModel();//웨이포인트 인포 모델 객체 초기화
             wpInfomodel.setWaylineWaypoint(waypoint);
             wpInfomodel.setActionInfos(actionlist);
             this.mWLIMList.add(i, wpInfomodel);
 
-            Log.i(TAG,this.mWLIMList.get(i).getActionInfos().toString());
-            Log.i(TAG,this.mWLIMList.get(i).getWaylineWaypoint().toString());
+            Log.i(TAG, this.mWLIMList.get(i).getActionInfos().toString());
+            Log.i(TAG, this.mWLIMList.get(i).getWaylineWaypoint().toString());
             waypoint = null;
         }
 
@@ -336,6 +346,25 @@ public class WpMissionManager {
             e.printStackTrace();
 
         }
+        logKMZfile();
+
+
+    }
+
+    //경로상에 있는 kmz파일의 내용을 log로 출력하는 메소드
+    public void logKMZfile() {
+        try {
+            File file = new File(kmzOutPath);
+            FileInputStream fis = new FileInputStream(file);
+            byte[] data = new byte[(int) file.length()];
+            fis.read(data);
+            fis.close();
+            String str = new String(data, "UTF-8");
+            Log.i(TAG, str);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
 

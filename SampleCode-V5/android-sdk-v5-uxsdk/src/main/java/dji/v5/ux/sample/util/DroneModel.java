@@ -1204,7 +1204,7 @@ public class DroneModel {
                     try {
                         send_mission_ack(MAV_MISSION_ACCEPTED);
                     } catch (Exception e) {
-                        Log.i(TAG, "exception : "+e.toString());
+                        Log.i(TAG, "exception : " + e.toString());
                     }
                 });//ack를 보낼 쓰레드를 하나 만들고 실행
                 sendMessageThread.start();
@@ -1338,13 +1338,14 @@ public class DroneModel {
             @Override
             public void onSuccess() {
                 Log.i(TAG, "WayPoint Mission Started");
+                toastinMain("WayPoint Mission Started");
 
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
                 Log.i(TAG, "sarting WPM failed : " + idjiError.description().toString());
-
+                toastinMain("sarting WPM failed : " + idjiError.description().toString());
             }
         });
 
