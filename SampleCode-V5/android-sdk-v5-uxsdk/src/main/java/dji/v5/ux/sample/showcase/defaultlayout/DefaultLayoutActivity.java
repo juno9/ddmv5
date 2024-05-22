@@ -245,7 +245,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             cameraSourceProcessor.onNext(new CameraSource(devicePosition, lensType));
         });
 
-        Log.i(TAG, "기존에 만들어둔 kmzFile validity check : " + WPMZManager.getInstance().checkValidation("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getValue().toString());
 
         //小surfaceView放置在顶部，避免被大的遮挡
         secondaryFPVWidget.setSurfaceViewZOrderOnTop(true);
@@ -266,9 +265,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
 
         prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity.this);
-        id = prefs.getString("pref_drone_id", "10000");
+        id = prefs.getString("pref_drone_id", "19");
         gcsip = prefs.getString("pref_gcs_ip", "127.0.0.1");
-        gcsport = prefs.getString("pref_telem_port", "10000");
+        gcsport = prefs.getString("pref_telem_port", "6760");
 
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));

@@ -223,7 +223,6 @@ public class KMZTestUtil {
     public static WaylineActionInfo transStay() {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.HOVER);
-
         ActionAircraftHoverParam param = new ActionAircraftHoverParam();
         param.setHoverTime((double) 3);
         info.setAircraftHoverParam(param);
@@ -233,7 +232,6 @@ public class KMZTestUtil {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.TAKE_PHOTO);
         List<CameraLensType> photoTypes = new ArrayList<>();
-
         ActionTakePhotoParam param = new ActionTakePhotoParam(
                 0, true, photoTypes, "djitest");
         param.setPayloadPositionIndex(0);

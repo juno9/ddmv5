@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
 import dji.sdk.wpmz.value.mission.ActionGimbalRotateParam;
 import dji.sdk.wpmz.value.mission.ActionStartRecordParam;
 import dji.sdk.wpmz.value.mission.ActionStopRecordParam;
@@ -197,6 +198,8 @@ public class KMZTestUtil {
                 return transGimbalPitch();
             case GIMBAL_YAW:
                 return transGimbalYaw();
+            case STAY:
+                return transStay();
             default:
                 return null;
 
@@ -213,6 +216,14 @@ public class KMZTestUtil {
         param.setRotateMode(WaylineGimbalActuatorRotateMode.ABSOLUTE_ANGLE);
         param.setPayloadPositionIndex(0);
         info.setGimbalRotateParam(param);
+        return info;
+    }
+    private static WaylineActionInfo transStay() {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.HOVER);
+        ActionAircraftHoverParam param = new ActionAircraftHoverParam();
+        param.setHoverTime(1.0);
+        info.setAircraftHoverParam(param);
         return info;
     }
 

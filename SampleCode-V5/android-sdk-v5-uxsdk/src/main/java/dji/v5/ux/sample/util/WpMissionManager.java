@@ -10,6 +10,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.dji.wpmzsdk.common.data.Template;
+import com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType;
 import com.dji.wpmzsdk.manager.WPMZManager;
 
 import java.io.File;
@@ -24,7 +25,6 @@ import java.util.zip.ZipEntry;
 
 import dji.sdk.keyvalue.value.mission.Waypoint;
 import dji.sdk.keyvalue.value.mission.WaypointAction;
-import dji.sdk.keyvalue.value.mission.WaypointActionType;
 import dji.sdk.keyvalue.value.mission.WaypointMission;
 import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
 import dji.sdk.wpmz.value.mission.ActionAircraftRotateYawParam;
@@ -74,7 +74,7 @@ public class WpMissionManager {
     String curMissionPath = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME);
     String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
 
-    String kmzOutPath = rootDir + "generate_test.kmz";
+    String kmzOutPath = rootDir + "generate_test_ddm.kmz";
     DroneModel model;
     int status = 0;
     DefaultLayoutActivity mainActivity;
@@ -176,74 +176,94 @@ public class WpMissionManager {
             waypoint = new WaylineWaypoint();//웨이포인트 객체 생성
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
-                    Log.d(TAG, "Waypoint: " + msg.x / 1000000.0 + ", " + msg.y / 1000000.0 + " at " + msg.z + " m " + msg.param2 + " Yaw " + msg.param1 + " Delay ");
-
-                    location = new WaylineLocationCoordinate2D((double) msg.x, (double) msg.y);//메시지 바탕으로 위치값 생성
-                    waypoint.setLocation(location);// 생성한 위치값을 웨이포인트의 위도와 경도로 설정
-                    waypoint.setHeight((double) msg.z);//웨이포인트의 고도 설정
-                    waypoint.setEllipsoidHeight((double) msg.z);//웨이포인트의 Ellipsoid고도 설정(이 항목이 뭔지 모르나 샘플에서 그냥 고도값을 넣은것을 보고 일단 넣어둠)
-
-                    if (speedchanged) {
-                        waypoint.setSpeed(changedSpeed);
-                    }
-                    else {
-                        waypoint.setSpeed(3.0);
-                    }
-
-
-
-                    if (msg.param1 > 1) {//멈춤 시간이 1보다 크면
-                        Log.d(TAG, "Delay : " + msg.param1);
-                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
-                        info.setActionType(WaylineActionType.HOVER);//액션 타입을 호버로 설정
-                        ActionAircraftHoverParam param = new ActionAircraftHoverParam();//
-                        param.setHoverTime((double) msg.param1);//얼마나 멈춰 있을지 지정해 둔 파라미터를 생성
-                        info.setAircraftHoverParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
-                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
-                    }
-
-                    if (msg.param2 > 0) {//돌리기 각도가 0보다 크면
-                        Log.d(TAG, "Rotate : " + msg.param2);
-                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
-                        info.setActionType(WaylineActionType.ROTATE_YAW);//액션 타입을 돌리기로 설정
-                        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();//액션 파라미터 객체 생성
-                        param.setHeading((double) msg.param2);//돌리기 각도를 파라미터에 넣음
-                        info.setAircraftRotateYawParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
-                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
-                    }
-                    break;
-
-                case MAV_CMD.MAV_CMD_DO_CHANGE_SPEED://이 스위치문이 작동한 다음번 아이템 부터는 여기서 설정한 속도가 들어가줘야 한다.
-                    Log.d(TAG, "Change Speed: " + msg.x / 10000000.0 + ", " + msg.y / 10000000.0 + " at " + msg.z + " m " + msg.param2 + " Yaw " + msg.param1 + " Delay ");
-                    speedchanged = true;
-                    if (speedchanged) {
-                        waypoint.setSpeed((double) msg.param2);
-                        changedSpeed = (double) msg.param2;
-                    }
+                    Log.d(TAG, "Waypoint: " + msg.x + ", " + msg.y  + " at " + msg.z + " m " + msg.param2 + " Yaw " + msg.param1 + " Delay ");
+//임시 주석처리
+//                    location = new WaylineLocationCoordinate2D((double) msg.x, (double) msg.y);//메시지 바탕으로 위치값 생성
+//                    waypoint.setLocation(location);// 생성한 위치값을 웨이포인트의 위도와 경도로 설정
+//                    waypoint.setHeight((double) msg.z);//웨이포인트의 고도 설정
+//                    waypoint.setEllipsoidHeight((double) msg.z);//웨이포인트의 Ellipsoid고도 설정(이 항목이 뭔지 모르나 샘플에서 그냥 고도값을 넣은것을 보고 일단 넣어둠)
+//
+//                    if (speedchanged) {
+//                        waypoint.setSpeed(changedSpeed);
+//                    } else {
+//                        waypoint.setSpeed(3.0);
+//                    }
+//
+//                    if (msg.param1 == 0 && msg.param2 == 0) {
+//                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
+//                        info.setActionType(WaylineActionType.TAKE_PHOTO);//액션 타입을 호버로 설정
+//                        ActionTakePhotoParam param = new ActionTakePhotoParam();//
+//                        param.setPayloadPositionIndex(0);//얼마나 멈춰 있을지 지정해 둔 파라미터를 생성
+//                        info.setTakePhotoParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
+//                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
+//                    }
+//
+//
+//                    if (msg.param1 > 0) {//멈춤 시간이 1보다 크면
+//                        Log.d(TAG, "Delay : " + msg.param1);
+//                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
+//                        info.setActionType(WaylineActionType.HOVER);//액션 타입을 호버로 설정
+//                        ActionAircraftHoverParam param = new ActionAircraftHoverParam();//
+//                        param.setHoverTime((double) msg.param1);//얼마나 멈춰 있을지 지정해 둔 파라미터를 생성
+//                        info.setAircraftHoverParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
+//                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
+//                    }
+//
+//                    if (msg.param2 > 0) {//돌리기 각도가 0보다 크면
+//                        Log.d(TAG, "Rotate : " + msg.param2);
+//                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
+//                        info.setActionType(WaylineActionType.ROTATE_YAW);//액션 타입을 돌리기로 설정
+//                        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();//액션 파라미터 객체 생성
+//                        param.setHeading((double) msg.param2);//돌리기 각도를 파라미터에 넣음
+//                        info.setAircraftRotateYawParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
+//                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
+//                    }
+//                    break;
+//
+//                case MAV_CMD.MAV_CMD_DO_CHANGE_SPEED://이 스위치문이 작동한 다음번 아이템 부터는 여기서 설정한 속도가 들어가줘야 한다.
+//                    Log.d(TAG, "Change Speed: " + msg.x / 10000000.0 + ", " + msg.y / 10000000.0 + " at " + msg.z + " m " + msg.param2 + " Yaw " + msg.param1 + " Delay ");
+//                    speedchanged = true;
+//                    if (speedchanged) {
+//                        waypoint.setSpeed((double) msg.param2);
+//                        changedSpeed = (double) msg.param2;
+//                    }
                     break;
 
 
                 case MAV_CMD.MAV_CMD_NAV_TAKEOFF:
                     Log.d(TAG, "Takeoff...");
-                    // if we got an item (Start item) already we got a position, now we just add altitude.
 
-                    // if we got an item (Start item) already we got a position, now we just add altitude.
-                    if (waypoint != null) {
-                        waypoint.setHeight((double) msg.z);
-                    } else {
-                        if (msg.x == 0 || msg.y == 0) {
-                            location = new WaylineLocationCoordinate2D(model.get_current_lat(), model.get_current_lon());//메시지 바탕으로 위치값 생성
-                            waypoint.setLocation(location);
-                            waypoint.setHeight((double) msg.z);
-
-
-                        } else {
-//                            currentWP = new Waypoint(m.x,m.z, m.z);
-                            location = new WaylineLocationCoordinate2D(msg.x / 1000000.0, msg.y / 1000000.0);//메시지 바탕으로 위치값 생성
-                            waypoint.setLocation(location);
-                            waypoint.setHeight((double) msg.z);
-                        }
-                    }
+                    //임시 주석처리
+//                    // if we got an item (Start item) already we got a position, now we just add altitude.
+//
+//                    // if we got an item (Start item) already we got a position, now we just add altitude.
+//
+//
+//
+//                        WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
+//                        info.setActionType(WaylineActionType.TAKE_PHOTO);//액션 타입을 호버로 설정
+//                        ActionTakePhotoParam param = new ActionTakePhotoParam();//
+//                        param.setPayloadPositionIndex(0);//얼마나 멈춰 있을지 지정해 둔 파라미터를 생성
+//                        info.setTakePhotoParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
+//                        actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
+//
+//
+//                    if (waypoint != null) {
+//                        waypoint.setHeight((double) msg.z);
+//                    } else {
+//                        if (msg.x == 0 || msg.y == 0) {
+//                            location = new WaylineLocationCoordinate2D(model.get_current_lat(), model.get_current_lon());//메시지 바탕으로 위치값 생성
+//                            waypoint.setLocation(location);
+//                            waypoint.setHeight((double) msg.z);
+//
+//
+//                        } else {
+////                            currentWP = new Waypoint(m.x,m.z, m.z);
+//                            location = new WaylineLocationCoordinate2D(msg.x / 1000000.0, msg.y / 1000000.0);//메시지 바탕으로 위치값 생성
+//                            waypoint.setLocation(location);
+//                            waypoint.setHeight((double) msg.z);
+//                        }
+//                    }
                     break;
 
 
@@ -319,16 +339,26 @@ public class WpMissionManager {
             Log.d(TAG, "Speed for mission will be " + waypoint.getSpeed() + " m/s");
             Log.d(TAG, "==============================");
             waypoint.setWaypointIndex(i);//첫 웨이포인트 미션 생성할거니까
+            location = new WaylineLocationCoordinate2D((double) msg.x, (double) msg.y);//메시지 바탕으로 위치값 생성
+            waypoint.setLocation(location);// 생성한 위치값을 웨이포인트의 위도와 경도로 설정
+            waypoint.setHeight((double) msg.z);//웨이포인트의 고도 설정
+            waypoint.setEllipsoidHeight((double) msg.z);//웨이포인트의 Ellipsoid고도 설정(이 항목이 뭔지 모르나 샘플에서 그냥 고도값을 넣은것을 보고 일단 넣어둠)
+            waypoint.setSpeed(3.0);//임의로 값 넣어둠, 추후 변경해야함
             waypoint.setUseGlobalTurnParam(true);
+            ArrayList<WaylineActionInfo> actionInfos = new ArrayList<>();
+            actionInfos.add(KMZTestUtil.createActionInfo(WaypointActionType.STAY));
             WaypointInfoModel wpInfomodel = new WaypointInfoModel();//웨이포인트 인포 모델 객체 초기화
             wpInfomodel.setWaylineWaypoint(waypoint);
             wpInfomodel.setActionInfos(actionlist);
+         if(msg.x==0||msg.y==0){//좌표값이 이상하면
 
-            this.mWLIMList.add(i, wpInfomodel);
+         }else{
+             this.mWLIMList.add(mWLIMList.size(),wpInfomodel);
+//
+         }
 
-            Log.i(TAG,i + " 번째 웨이라인웨이포인트 인포 액션정보 "+ this.mWLIMList.get(i).getActionInfos().toString());
-            Log.i(TAG,i + " 번째 웨이라인웨이포인트인포 웨이포인트 정보 "+ this.mWLIMList.get(i).getWaylineWaypoint().toString());
 
+//
             actionlist.clear();
             waypoint = null;
         }
@@ -340,24 +370,19 @@ public class WpMissionManager {
 
     public void saveKMZfile() {
 
-        WPMZManager manager=WPMZManager.getInstance();
-        Log.i(TAG, "기존에 만들어둔 kmzFile validity check : " + manager.checkValidation(kmzOutPath).getValue().size());
-       Log.i(TAG, "WaylineMissionParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionParseInfo().toString());
-        Log.i(TAG, "WaylineMissionConfigParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionConfigParseInfo().toString());
-        Log.i(TAG, "WaylineTemplatesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineTemplatesParseInfo().toString());
-        Log.i(TAG, "WaylineWaylinesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineWaylinesParseInfo().toString());
+        WPMZManager manager = WPMZManager.getInstance();
+
 
         WaylineMission wlm = KMZTestUtil.createWaylineMission();
         WaylineMissionConfig wlmc = KMZTestUtil.createMissionConfig();
         Template template = KMZTestUtil.createTemplate(this.mWLIMList);
 
 
-
-       File file=new File(kmzOutPath);
-       if(file.exists()){//기존 경로에 파일 있으면 삭제
-           Log.i(TAG, "kmzFile exists, so Deleted it: " + rootDir);
-           file.delete();
-       }
+        File file = new File(kmzOutPath);
+        if (file.exists()) {//기존 경로에 파일 있으면 삭제
+            Log.i(TAG, "kmzFile exists, so Deleted it: " + rootDir);
+            file.delete();
+        }
         manager.generateKMZFile(kmzOutPath, wlm, wlmc, template);
         Log.i(TAG, "kmzFile saved directory: " + rootDir);
         Log.i(TAG, "kmzFile validity check : " + manager.checkValidation(kmzOutPath).getValue().toString());

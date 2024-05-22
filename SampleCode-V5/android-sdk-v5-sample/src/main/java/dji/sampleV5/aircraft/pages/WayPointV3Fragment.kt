@@ -172,6 +172,7 @@ class WayPointV3Fragment : DJIFragment() {
             val waypointFile = File(curMissionPath)//생성해 둔 KMZ파일을 불러옴
             if (waypointFile.exists()) {//파일이 존재한다면
                 ToastUtils.showToast(WPMZManager.getInstance().checkValidation(curMissionPath).value.toString())
+                LogUtils.i(logTag , "validation check : " + WPMZManager.getInstance().checkValidation(curMissionPath).value.toString())
                 wayPointV3VM.pushKMZFileToAircraft(curMissionPath)//드론 기체에 KMZ파일을 전달함
             } else {
                 ToastUtils.showToast("Mission file not found!");
@@ -902,6 +903,8 @@ class WayPointV3Fragment : DJIFragment() {
             1 -> WaypointActionType.START_RECORD
             2 -> WaypointActionType.STOP_RECORD
             3 -> WaypointActionType.GIMBAL_PITCH
+            4 -> WaypointActionType.ROTATE_AIRCRAFT
+            5 -> WaypointActionType.STAY
             else -> {
                 WaypointActionType.START_TAKE_PHOTO
             }
