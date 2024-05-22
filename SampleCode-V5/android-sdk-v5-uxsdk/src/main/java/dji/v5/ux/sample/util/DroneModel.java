@@ -36,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Timer;
@@ -81,6 +82,7 @@ import dji.v5.manager.aircraft.waypoint3.model.WaypointMissionExecuteState;
 import dji.v5.manager.interfaces.IKeyManager;
 import dji.v5.utils.common.ContextUtil;
 import dji.v5.utils.common.DiskUtil;
+import dji.v5.utils.common.FileUtils;
 import dji.v5.ux.MAVLink.MAVLinkPacket;
 import dji.v5.ux.MAVLink.Messages.MAVLinkMessage;
 import dji.v5.ux.MAVLink.common.msg_altitude;
@@ -640,6 +642,13 @@ public class DroneModel {
 
         msg.latitude = (int) (mLatitude * Math.pow(10, 7));
         msg.longitude = (int) (mLongitude * Math.pow(10, 7));
+        if (isDev) {
+            if (msg.latitude <= 0 || msg.longitude <= 0) {
+                msg.latitude = (int) ((DEFUALT_LATITUDE + (mSystemId * 0.001)) * Math.pow(10, 7));
+                msg.longitude = (int) ((DEFUALT_LONGITUDE + (mSystemId * 0.001)) * Math.pow(10, 7));
+            }
+        }
+
         // msg.altitude = (int) (djiAircraft.getFlightController().getState().getHomePointAltitude());
 //        msg.altitude = (int) (djiAircraft.getFlightController().getState().getGoHomeHeight()); 이거 V5에서 똑같은 역할 하는거 찾아야 함
 
@@ -659,12 +668,12 @@ public class DroneModel {
         KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyHomeLocation), new LocationCoordinate2D(lat, lon), new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                //parent.Log("set_home_position Done");
+                parent.Log("set_home_position Done");
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                //parent.Log("set_home_position Failed");
+                parent.Log("set_home_position Failed");
             }
         });
     }
@@ -1294,87 +1303,72 @@ public class DroneModel {
     //웨이포인트 미션 시작 메소드
     public void startWaypointMission() {
 
-        Log.i(TAG, WaypointMissionManager.getInstance().getAvailableWaylineIDs("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint").toString());
+
+        String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
+        String kmzOutPath = rootDir + "generate_test.kmz";
+        ArrayList wayline = new ArrayList<Integer>();
+        wayline.add(0, 0);
+
+        Log.i(TAG, "available waylineIDs : " + WaypointMissionManager.getInstance().getAvailableWaylineIDs(rootDir).toString());
+
+
         //임무 종료시 리스너 지워야 하는데 임무 종료 시점을 특정하지 못해 일단은 리스너들주석처리 해 둔 상태
-//        WaypointMissionManager.getInstance().addWaylineExecutingInfoListener(new WaylineExecutingInfoListener() {
-//            @Override
-//            public void onWaylineExecutingInfoUpdate(WaylineExecutingInfo excutingWaylineInfo) {
-//                Log.i(TAG,"excutingWaylineInfo waylineID : "+excutingWaylineInfo.getWaylineID()+"\nmissionfile name : "+excutingWaylineInfo.getMissionFileName()+"\nCurrentWaypointIndex : "+excutingWaylineInfo.getCurrentWaypointIndex() );
-//            }
-//
-//            @Override
-//            public void onWaylineExecutingInterruptReasonUpdate(IDJIError error) {
-//                Log.i(TAG,"WaylineExecutingInterruptReason : "+error.toString());
-//            }
-//        });
-//        WaypointMissionManager.getInstance().addWaypointMissionExecuteStateListener(new WaypointMissionExecuteStateListener() {
-//            @Override
-//            public void onMissionStateUpdate(WaypointMissionExecuteState missionState) {
-//                Log.i(TAG,"onMissionStateUpdate : "+missionState.toString());
-//            }
-//        });
-//        WaypointMissionManager.getInstance().addWaypointActionListener(new WaypointActionListener() {
-//            @Override
-//            public void onExecutionStart(int actionId) {
-//                Log.i(TAG,"onExecutionStart actionId : "+actionId);
-//            }
-//
-//            @Override
-//            public void onExecutionFinish(int actionId, @Nullable IDJIError error) {
-//                Log.i(TAG,"onExecutionFinish error : "+error.toString());
-//            }
-//
-//            @Override
-//            public void onExecutionStart(int actionGroup, int actionId) {
-//                Log.i(TAG,"onExecutionStart actionGroup : "+actionGroup+" actionId : "+actionId);
-//            }
-//
-//            @Override
-//            public void onExecutionFinish(int actionGroup, int actionId, @Nullable IDJIError error) {
-//                Log.i(TAG,"onExecutionFinish actionGroup : "+actionGroup+" actionId : "+actionId+"error : "+error.toString());
-//            }
-//        });
-        WaypointMissionManager.getInstance().startMission(kmzOutPath, new CommonCallbacks.CompletionCallback() {
+        WaypointMissionManager.getInstance().addWaylineExecutingInfoListener(new WaylineExecutingInfoListener() {
+            @Override
+            public void onWaylineExecutingInfoUpdate(WaylineExecutingInfo excutingWaylineInfo) {
+                Log.i(TAG, "excutingWaylineInfo waylineID : " + excutingWaylineInfo.getWaylineID() + "\nmissionfile name : " + excutingWaylineInfo.getMissionFileName() + "\nCurrentWaypointIndex : " + excutingWaylineInfo.getCurrentWaypointIndex());
+            }
+
+            @Override
+            public void onWaylineExecutingInterruptReasonUpdate(IDJIError error) {
+                Log.i(TAG, "WaylineExecutingInterruptReason : " + error.toString());
+            }
+        });
+        WaypointMissionManager.getInstance().addWaypointMissionExecuteStateListener(new WaypointMissionExecuteStateListener() {
+            @Override
+            public void onMissionStateUpdate(WaypointMissionExecuteState missionState) {
+                Log.i(TAG, "onMissionStateUpdate : " + missionState.toString());
+            }
+        });
+        WaypointMissionManager.getInstance().addWaypointActionListener(new WaypointActionListener() {
+            @Override
+            public void onExecutionStart(int actionId) {
+                Log.i(TAG, "onExecutionStart actionId : " + actionId);
+            }
+
+            @Override
+            public void onExecutionFinish(int actionId, @Nullable IDJIError error) {
+                Log.i(TAG, "onExecutionFinish error : " + error.toString());
+            }
+
+            @Override
+            public void onExecutionStart(int actionGroup, int actionId) {
+                Log.i(TAG, "onExecutionStart actionGroup : " + actionGroup + " actionId : " + actionId);
+            }
+
+            @Override
+            public void onExecutionFinish(int actionGroup, int actionId, @Nullable IDJIError error) {
+                Log.i(TAG, "onExecutionFinish actionGroup : " + actionGroup + " actionId : " + actionId + "error : " + error.toString());
+            }
+        });
+
+
+        WaypointMissionManager.getInstance().startMission("generate_test", new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                Log.i(TAG, "WayPoint Mission Started");
+                Log.i(TAG, "WayPoint Mission Started" + "\n filename: " + FileUtils.getFileName(kmzOutPath, WAYPOINT_FILE_TAG));
                 toastinMain("WayPoint Mission Started");
 
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                Log.i(TAG, "sarting WPM failed : " + idjiError.description().toString());
-                toastinMain("sarting WPM failed : " + idjiError.description().toString());
+                Log.i(TAG, "sarting WPM failed : " + idjiError.description().toString() + "\n filename: " + FileUtils.getFileName(kmzOutPath, WAYPOINT_FILE_TAG));
+                toastinMain("sarting WPM failed : " + idjiError.description().toString() + "\n filename: " + FileUtils.getFileName(kmzOutPath, WAYPOINT_FILE_TAG));
             }
         });
 
-//        mAutonomy = false;
-//        //parent.LogMessageDJI("start WaypointMission()");
 //
-//        if (getWaypointMissionOperator() == null) {
-//            //parent.LogMessageDJI("start WaypointMission() - WaypointMissionOperator null");
-//            return;
-//        }
-//        if (getWaypointMissionOperator().getCurrentState() == WaypointMissionState.READY_TO_EXECUTE) {
-//            //parent.LogMessageDJI("Ready to execute mission!\n");
-//        } else {
-//            //parent.LogMessageDJI("Not ready to execute mission\n");
-//            //parent.LogMessageDJI(getWaypointMissionOperator().getCurrentState().getName());
-//            return;
-//        }
-//        if (mSafetyEnabled) {
-//            //parent.LogMessageDJI("You must turn off the safety to start mission");
-//        } else {
-//            getWaypointMissionOperator().startMission(djiError -> {
-//                if (djiError != null) {
-//                    //parent.LogMessageDJI("Error: " + djiError.toString());
-//                    // TODO: 여기서 start image interval 할지, 데이터 들어오는 고도 체킹해서 할지 MAV_CMD_IMAGE_START_CAPTURE 동작 유무 확인 후 수행.
-//                    //        this.mDrone.do_set_Gimbal(9, 120);
-//                } else {//parent.LogMessageDJI("Mission started!");
-//                }
-//            });
-//        }
     }
 
 //    public void startImageCaptureIntervalControl(/*float paramInterval*/) {
@@ -2112,9 +2106,12 @@ public class DroneModel {
     String WAYPOINT_SAMPLE_FILE_DIR = "waypoint/";
     String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
     String kmzOutPath;
-
+    String WAYPOINT_FILE_TAG = ".kmz";
     boolean missionUploaded;
-
+    String cur = DiskUtil.getExternalCacheDirPath(
+            ContextUtil.getContext(),
+            WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME
+    );
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();

@@ -34,6 +34,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
+import android.util.Log
 import android.widget.*
 import com.dji.industry.mission.DocumentsUtils
 import com.dji.wpmzsdk.common.data.Template
@@ -170,6 +171,7 @@ class WayPointV3Fragment : DJIFragment() {
         btn_mission_upload?.setOnClickListener {//uploadKmz 버튼 클릭 리스너 정의
             val waypointFile = File(curMissionPath)//생성해 둔 KMZ파일을 불러옴
             if (waypointFile.exists()) {//파일이 존재한다면
+                ToastUtils.showToast(WPMZManager.getInstance().checkValidation(curMissionPath).value.toString())
                 wayPointV3VM.pushKMZFileToAircraft(curMissionPath)//드론 기체에 KMZ파일을 전달함
             } else {
                 ToastUtils.showToast("Mission file not found!");
@@ -202,10 +204,13 @@ class WayPointV3Fragment : DJIFragment() {
                 object : CommonCallbacks.CompletionCallback {
                     override fun onSuccess() {
                         ToastUtils.showToast("startMission Success")
+                        LogUtils.i(logTag , "availableWaylineIDs : " + wayPointV3VM.getAvailableWaylineIDs(curMissionPath).toString())
+                        LogUtils.i(logTag , "filename : " + FileUtils.getFileName(curMissionPath, WAYPOINT_FILE_TAG)+" Wayline : "+ selectWaylines.toString() )
                     }
 
                     override fun onFailure(error: IDJIError) {
                         ToastUtils.showToast("startMission Failed " + getErroMsg(error))
+                        LogUtils.i(logTag , "filename : " + FileUtils.getFileName(curMissionPath, WAYPOINT_FILE_TAG)+" Wayline : "+ selectWaylines.toString() )
                     }
                 })
 
@@ -280,12 +285,30 @@ class WayPointV3Fragment : DJIFragment() {
             val waylineMission: WaylineMission = createWaylineMission()//웨이라인 미션 생성
             val missionConfig: WaylineMissionConfig = KMZTestUtil.createMissionConfig()//
             val template: Template = KMZTestUtil.createTemplate(showWaypoints)//웨이포인트가 들어있는 어레이리스트를 매개변수로 템플릿을 생성함
+
+
+            for(i : Int in 0 until showWaypoints.size){
+                LogUtils.i(logTag , "waylineWaypoint : "+ showWaypoints.get(i).waylineWaypoint.toString())
+                LogUtils.i(logTag , "actionInfos : "+ showWaypoints.get(i).actionInfos.toString())
+            }
+
+
+
+
             WPMZManager.getInstance()
                 .generateKMZFile(kmzOutPath, waylineMission, missionConfig, template)//KMZ파일 생성
             curMissionPath  = kmzOutPath
             ToastUtils.showToast("Save Kmz Success Path is : $kmzOutPath")//생성된 KMZ파일의 경로를 토스트로 표시함
 
-            waypoint_add.isChecked = false;
+
+            LogUtils.i(logTag , "kmzvalidity check right after the generation : "+ WPMZManager.getInstance().checkValidation(curMissionPath).value)
+            LogUtils.i(logTag ,"waylineMissionParseInfo : "+WPMZManager.getInstance().getKMZInfo(curMissionPath).waylineMissionParseInfo.toString())
+            LogUtils.i(logTag ,"waylineMissionConfigParseInfo : "+WPMZManager.getInstance().getKMZInfo(curMissionPath).waylineMissionConfigParseInfo.toString())
+            LogUtils.i(logTag ,"waylineTemplatesParseInfo : "+WPMZManager.getInstance().getKMZInfo(curMissionPath).waylineTemplatesParseInfo.toString())
+            LogUtils.i(logTag ,"waylineWaylinesParseInfo : "+WPMZManager.getInstance().getKMZInfo(curMissionPath).waylineWaylinesParseInfo.toString())
+
+
+                waypoint_add.isChecked = false;
         }
 
         btn_breakpoint_resume.setOnClickListener{

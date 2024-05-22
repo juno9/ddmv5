@@ -610,7 +610,7 @@ public class MAVLinkReceiver {
 
 
         wpMissionManager.generateWLIMlist();//받은 웨이포인트미션 아이템 메시지를 바탕으로 웨이포인트 인포 모델을 만들고 그것들을 리스트에 담음
-        wpMissionManager.saveKMZfile();//만들어진 웨이포인트 인포 모델을 활용하여 kmz파일을 생성
+        //만들어진 웨이포인트 인포 모델을 활용하여 kmz파일을 생성
         kmzOutPath = wpMissionManager.getKmzOutPath();//만들어 둔
         mModel.uploadKMZfile(mModel, kmzOutPath);
 

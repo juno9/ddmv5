@@ -1,5 +1,6 @@
 package dji.sampleV5.aircraft.utils;
 
+import static dji.sdk.wpmz.value.mission.WaylineExitOnRCLostAction.HOVER;
 import static dji.sdk.wpmz.value.mission.WaylineWaypointTurnMode.TO_POINT_AND_STOP_WITH_DISCONTINUITY_CURVATURE;
 
 import com.dji.wpmzsdk.common.data.Template;
@@ -9,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dji.sampleV5.aircraft.utils.wpml.WaypointInfoModel;
+import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
+import dji.sdk.wpmz.value.mission.ActionAircraftRotateYawParam;
 import dji.sdk.wpmz.value.mission.ActionGimbalRotateParam;
 import dji.sdk.wpmz.value.mission.ActionStartRecordParam;
 import dji.sdk.wpmz.value.mission.ActionStopRecordParam;
@@ -106,6 +109,10 @@ public class KMZTestUtil {
                 return transStopRecord();
             case GIMBAL_PITCH:
                 return transGimbalPitch();
+            case ROTATE_AIRCRAFT:
+                return transRotateYaw();
+            case STAY:
+                return transStay();
             default:
                 return null;
 
@@ -203,6 +210,23 @@ public class KMZTestUtil {
         param.setRotateMode(WaylineGimbalActuatorRotateMode.ABSOLUTE_ANGLE);
         param.setPayloadPositionIndex(0);
         info.setGimbalRotateParam(param);
+        return info;
+    }
+    public static WaylineActionInfo transRotateYaw() {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.ROTATE_YAW);
+        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
+        param.setHeading((double) 25);
+        info.setAircraftRotateYawParam(param);
+        return info;
+    }
+    public static WaylineActionInfo transStay() {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.HOVER);
+
+        ActionAircraftHoverParam param = new ActionAircraftHoverParam();
+        param.setHoverTime((double) 3);
+        info.setAircraftHoverParam(param);
         return info;
     }
     public static WaylineActionInfo transTakePhoto() {

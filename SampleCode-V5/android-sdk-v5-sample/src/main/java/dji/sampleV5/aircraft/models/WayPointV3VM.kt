@@ -4,6 +4,7 @@ import android.R
 import android.content.Context
 import android.widget.ArrayAdapter
 import androidx.lifecycle.MutableLiveData
+import com.dji.wpmzsdk.manager.WPMZManager
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import dji.sampleV5.aircraft.data.FlightControlState
@@ -49,6 +50,9 @@ class WayPointV3VM : DJIViewModel() {
 
 
     fun pushKMZFileToAircraft(missionPath: String) {
+
+
+
         WaypointMissionManager.getInstance().pushKMZFileToAircraft(missionPath, object :
             CommonCallbacks.CompletionCallbackWithProgress<Double> {
             override fun onProgressUpdate(progress: Double) {
@@ -73,11 +77,7 @@ class WayPointV3VM : DJIViewModel() {
         missionUploadState.postValue(missionUploadState.value)
     }
 
-    fun startMission(
-        missionId: String,
-        waylineIDs: List<Int>,
-        callback: CommonCallbacks.CompletionCallback
-    ) {
+    fun startMission(missionId: String, waylineIDs: List<Int>, callback: CommonCallbacks.CompletionCallback) {
         WaypointMissionManager.getInstance().startMission(missionId, waylineIDs, callback)
     }
 

@@ -48,10 +48,13 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.dji.wpmzsdk.common.data.Template;
 import com.dji.wpmzsdk.common.utils.kml.model.DroneCameraModel;
+import com.dji.wpmzsdk.manager.WPMZManager;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -74,6 +77,8 @@ import dji.sdk.keyvalue.value.common.CameraLensType;
 import dji.sdk.keyvalue.value.common.ComponentIndexType;
 import dji.sdk.keyvalue.value.common.LiveStreamingSettings;
 import dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode;
+import dji.sdk.wpmz.value.mission.WaylineMission;
+import dji.sdk.wpmz.value.mission.WaylineMissionConfig;
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.common.error.IDJIError;
 import dji.v5.common.video.channel.VideoChannelState;
@@ -130,6 +135,7 @@ import dji.v5.ux.sample.util.MAVLinkReceiver;
 import dji.v5.ux.sample.util.MAVParam;
 import dji.v5.ux.sample.util.WpMissionManager;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
+import dji.v5.ux.utils.KMZTestUtil;
 import dji.v5.ux.visualcamera.CameraNDVIPanelWidget;
 import dji.v5.ux.visualcamera.CameraVisiblePanelWidget;
 import dji.v5.ux.visualcamera.zoom.FocalZoomWidget;
@@ -239,6 +245,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             cameraSourceProcessor.onNext(new CameraSource(devicePosition, lensType));
         });
 
+        Log.i(TAG, "기존에 만들어둔 kmzFile validity check : " + WPMZManager.getInstance().checkValidation("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getValue().toString());
 
         //小surfaceView放置在顶部，避免被大的遮挡
         secondaryFPVWidget.setSurfaceViewZOrderOnTop(true);
@@ -267,10 +274,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         mModel.setSystemId(Integer.parseInt(id));
 
 
-
         mReceiver = new MAVLinkReceiver(this, mModel);
 
-        wpMissionmanager=new WpMissionManager(mReceiver,mModel,this);
+        wpMissionmanager = new WpMissionManager(mReceiver, mModel, this);
         mReceiver.setWpMissionManager(wpMissionmanager);
 
         mGCSCommunicator = new GCSCommunicatorAsyncTask(this);
@@ -675,7 +681,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-                                  //  startLiveStream();   //임시 주석처리
+                                    //  startLiveStream();   //임시 주석처리
 
 
                                 });

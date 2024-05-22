@@ -27,6 +27,7 @@ import dji.sdk.keyvalue.value.mission.WaypointAction;
 import dji.sdk.keyvalue.value.mission.WaypointActionType;
 import dji.sdk.keyvalue.value.mission.WaypointMission;
 import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
+import dji.sdk.wpmz.value.mission.ActionAircraftRotateYawParam;
 import dji.sdk.wpmz.value.mission.ActionTakePhotoParam;
 import dji.sdk.wpmz.value.mission.CameraLensType;
 import dji.sdk.wpmz.value.mission.WaylineActionInfo;
@@ -151,7 +152,7 @@ public class WpMissionManager {
         return kmzOutPath;
     }
 
-    protected ArrayList<WaypointInfoModel> generateWLIMlist() {//미션아이템 목록을 웨이라인 인포 모델 목록으로 변환하는 메소드
+    protected void generateWLIMlist() {//미션아이템 목록을 웨이라인 인포 모델 목록으로 변환하는 메소드
 
 
         //웨이라인 인포 모델을 만들 때 들어가는 웨이라인웨이포인트 객체가 있다.
@@ -185,11 +186,13 @@ public class WpMissionManager {
                     if (speedchanged) {
                         waypoint.setSpeed(changedSpeed);
                     }
-//                    else {
-//                        waypoint.setSpeed(5.0);
-//                    }
+                    else {
+                        waypoint.setSpeed(3.0);
+                    }
 
-                    if (msg.param1 > 0) {//멈춤 시간이 0보다 크면
+
+
+                    if (msg.param1 > 1) {//멈춤 시간이 1보다 크면
                         Log.d(TAG, "Delay : " + msg.param1);
                         WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
                         info.setActionType(WaylineActionType.HOVER);//액션 타입을 호버로 설정
@@ -203,9 +206,9 @@ public class WpMissionManager {
                         Log.d(TAG, "Rotate : " + msg.param2);
                         WaylineActionInfo info = new WaylineActionInfo();//웨이포인트 액션 정보 객체 생성
                         info.setActionType(WaylineActionType.ROTATE_YAW);//액션 타입을 돌리기로 설정
-                        ActionAircraftHoverParam param = new ActionAircraftHoverParam();//액션 파라미터 객체 생성
-                        param.setHoverTime((double) msg.param2);//돌리기 각도를 파라미터에 넣음
-                        info.setAircraftHoverParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
+                        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();//액션 파라미터 객체 생성
+                        param.setHeading((double) msg.param2);//돌리기 각도를 파라미터에 넣음
+                        info.setAircraftRotateYawParam(param);//액션인포의 액션에 생성한 파라미터를 넣음
                         actionlist.add(info);//액션리스트에 생성한 액션인포를 넣음
                     }
                     break;
@@ -320,50 +323,49 @@ public class WpMissionManager {
             WaypointInfoModel wpInfomodel = new WaypointInfoModel();//웨이포인트 인포 모델 객체 초기화
             wpInfomodel.setWaylineWaypoint(waypoint);
             wpInfomodel.setActionInfos(actionlist);
+
             this.mWLIMList.add(i, wpInfomodel);
 
-            Log.i(TAG, this.mWLIMList.get(i).getActionInfos().toString());
-            Log.i(TAG, this.mWLIMList.get(i).getWaylineWaypoint().toString());
+            Log.i(TAG,i + " 번째 웨이라인웨이포인트 인포 액션정보 "+ this.mWLIMList.get(i).getActionInfos().toString());
+            Log.i(TAG,i + " 번째 웨이라인웨이포인트인포 웨이포인트 정보 "+ this.mWLIMList.get(i).getWaylineWaypoint().toString());
+
+            actionlist.clear();
             waypoint = null;
         }
 
-
-        return this.mWLIMList;
+        this.saveKMZfile();
 
     }
 
+
     public void saveKMZfile() {
+
+        WPMZManager manager=WPMZManager.getInstance();
+        Log.i(TAG, "기존에 만들어둔 kmzFile validity check : " + manager.checkValidation(kmzOutPath).getValue().size());
+       Log.i(TAG, "WaylineMissionParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionParseInfo().toString());
+        Log.i(TAG, "WaylineMissionConfigParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionConfigParseInfo().toString());
+        Log.i(TAG, "WaylineTemplatesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineTemplatesParseInfo().toString());
+        Log.i(TAG, "WaylineWaylinesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineWaylinesParseInfo().toString());
+
         WaylineMission wlm = KMZTestUtil.createWaylineMission();
         WaylineMissionConfig wlmc = KMZTestUtil.createMissionConfig();
         Template template = KMZTestUtil.createTemplate(this.mWLIMList);
-        WPMZManager.getInstance().generateKMZFile(kmzOutPath, wlm, wlmc, template);
+
+
+
+       File file=new File(kmzOutPath);
+       if(file.exists()){//기존 경로에 파일 있으면 삭제
+           Log.i(TAG, "kmzFile exists, so Deleted it: " + rootDir);
+           file.delete();
+       }
+        manager.generateKMZFile(kmzOutPath, wlm, wlmc, template);
         Log.i(TAG, "kmzFile saved directory: " + rootDir);
+        Log.i(TAG, "kmzFile validity check : " + manager.checkValidation(kmzOutPath).getValue().toString());
+        Log.i(TAG, "WaylineMissionParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionParseInfo().toString());
+        Log.i(TAG, "WaylineMissionConfigParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionConfigParseInfo().toString());
+        Log.i(TAG, "WaylineTemplatesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineTemplatesParseInfo().toString());
+        Log.i(TAG, "WaylineWaylinesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineWaylinesParseInfo().toString());
 
-        File file = new File(getFilesDir(mainActivity.getApplicationContext()), "example.txt");
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write("Hello, World!".getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        }
-        logKMZfile();
-
-
-    }
-
-    //경로상에 있는 kmz파일의 내용을 log로 출력하는 메소드
-    public void logKMZfile() {
-        try {
-            File file = new File(kmzOutPath);
-            FileInputStream fis = new FileInputStream(file);
-            byte[] data = new byte[(int) file.length()];
-            fis.read(data);
-            fis.close();
-            String str = new String(data, "UTF-8");
-            Log.i(TAG, str);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
     }
 

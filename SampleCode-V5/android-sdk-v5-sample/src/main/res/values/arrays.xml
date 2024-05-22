@@ -104,6 +104,8 @@
         <item>Start Record</item>
         <item>Stop Record</item>
         <item>Gimbal Pitch</item>
+        <item>STAY</item>
+        <item>ROTATE</item>
     </string-array>
 
     <string-array name="kml_heigh_mode">
