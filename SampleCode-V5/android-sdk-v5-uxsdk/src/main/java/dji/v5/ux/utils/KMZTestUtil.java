@@ -10,6 +10,7 @@ import java.util.List;
 
 
 import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
+import dji.sdk.wpmz.value.mission.ActionAircraftRotateYawParam;
 import dji.sdk.wpmz.value.mission.ActionGimbalRotateParam;
 import dji.sdk.wpmz.value.mission.ActionStartRecordParam;
 import dji.sdk.wpmz.value.mission.ActionStopRecordParam;
@@ -41,6 +42,7 @@ import dji.sdk.wpmz.value.mission.WaylineWaypoint;
 import dji.sdk.wpmz.value.mission.WaylineWaypointPitchMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawMode;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawParam;
+import dji.sdk.wpmz.value.mission.WaylineWaypointYawPathMode;
 import dji.v5.ux.utils.wpml.WaypointInfoModel;
 
 /**
@@ -200,6 +202,8 @@ public class KMZTestUtil {
                 return transGimbalYaw();
             case STAY:
                 return transStay();
+            case ROTATE_AIRCRAFT:
+                return transRotate();
             default:
                 return null;
 
@@ -222,8 +226,18 @@ public class KMZTestUtil {
         WaylineActionInfo info = new WaylineActionInfo();
         info.setActionType(WaylineActionType.HOVER);
         ActionAircraftHoverParam param = new ActionAircraftHoverParam();
-        param.setHoverTime(1.0);
+        param.setHoverTime(0.0);
         info.setAircraftHoverParam(param);
+        return info;
+    }
+
+    private static WaylineActionInfo transRotate() {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.ROTATE_YAW);
+        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
+        param.setHeading(DEF_YAW_ANGLE);
+        param.setPathMode(WaylineWaypointYawPathMode.CLOCKWISE);
+        info.setAircraftRotateYawParam(param);
         return info;
     }
 

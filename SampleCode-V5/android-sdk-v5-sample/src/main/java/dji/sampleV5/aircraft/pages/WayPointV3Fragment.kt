@@ -903,8 +903,8 @@ class WayPointV3Fragment : DJIFragment() {
             1 -> WaypointActionType.START_RECORD
             2 -> WaypointActionType.STOP_RECORD
             3 -> WaypointActionType.GIMBAL_PITCH
-            4 -> WaypointActionType.ROTATE_AIRCRAFT
-            5 -> WaypointActionType.STAY
+            4 -> WaypointActionType.STAY
+            5 -> WaypointActionType.ROTATE_AIRCRAFT
             else -> {
                 WaypointActionType.START_TAKE_PHOTO
             }
