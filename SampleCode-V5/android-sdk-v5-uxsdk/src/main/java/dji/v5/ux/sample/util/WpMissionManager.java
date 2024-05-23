@@ -129,15 +129,17 @@ public class WpMissionManager {
 
     protected void generateWLIMlist() {
         WaylineWaypoint waypoint = null; // 웨이포인트 객체 초기화
-
+        WaylineActionInfo waitnginfo = new WaylineActionInfo();
 
         boolean triggerDistanceEnabled = false;
         int currentWPIMindex = 0; // WPIM 리스트에 추가될 인덱스
         boolean speedChanged = false;
         double defaultSpeed = 3.0;
         double changedSpeed = 0.0;
+        boolean isInfoWaiting = false;
 
         for (int i = 0; i < this.getmMissionItemList().size(); i++) {
+            Log.d(TAG, "==================================================="+i+"번째 아이템 " + "=======================================================");
             msg_mission_item msg = this.getmMissionItemList().get(i); // 마브링크 미션 아이템 목록에서 DJI미션으로 변환할 메시지 꺼냄
             waypoint = new WaylineWaypoint(); // 웨이포인트 객체 생성
             WaylineActionInfo info = new WaylineActionInfo(); // 액션인포 객체 생성
@@ -156,14 +158,15 @@ public class WpMissionManager {
                     break;
                 case MAV_CMD.MAV_CMD_CONDITION_YAW:
                     Log.d(TAG, msg.toString());
-                    if (msg.param2 > 0) { // Yaw 각도가 0보다 크면
+                    if (msg.param1 > 0) { // Yaw 각도가 0보다 크면
                         info.setActionType(WaylineActionType.ROTATE_YAW);
                         ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
                         param.setHeading((double) msg.param1);
                         param.setPathMode(WaylineWaypointYawPathMode.CLOCKWISE);
                         info.setAircraftRotateYawParam(param);
                         Log.d(TAG, "actionInfo: " + info.toString());
-                        actionInfos.add(info);
+                        isInfoWaiting =true;
+                        waitnginfo=info;
                     }
                     break;
 
@@ -239,28 +242,38 @@ public class WpMissionManager {
             Log.i(TAG,  "waypoint에 설정한 index : "+currentWPIMindex);
             WaypointInfoModel wpInfoModel = new WaypointInfoModel(); // 웨이포인트 인포 모델 객체 초기화
 
-            if (msg.command == MAV_CMD.MAV_CMD_NAV_WAYPOINT && (msg.x != 0 || msg.y != 0)) {
+            if (msg.command == MAV_CMD.MAV_CMD_NAV_WAYPOINT && (msg.x != 0 || msg.y != 0)) {//웨이포인트 명령어이고 위도, 경도가 0이 아닐 때
                 wpInfoModel.setWaylineWaypoint(waypoint);
 
 
-                if(actionInfos.size()==0){
-                    info.setActionType(WaylineActionType.TAKE_PHOTO);
-                    ActionTakePhotoParam param = new ActionTakePhotoParam();
-
-                    actionInfos.add(info);
+                if(isInfoWaiting){
+                    actionInfos.add(waitnginfo);
+                    waitnginfo=null;
+                    waitnginfo=new WaylineActionInfo();
+                    isInfoWaiting=false;
                 }
+//                if(actionInfos.size()==0 ){
+//                    info.setActionType(WaylineActionType.TAKE_PHOTO);
+//                    ActionTakePhotoParam param = new ActionTakePhotoParam();
+//                    actionInfos.add(info);
+//                }
+
+
                 wpInfoModel.setActionInfos(actionInfos);
                 Log.i(TAG,  "wpInfoModel에 담긴"+wpInfoModel.getActionInfos());
                 mWLIMList.add(wpInfoModel); // 웨이포인트 인포 모델 리스트에 추가
 
                 currentWPIMindex++;
 
-            } else if(msg.x == 0 || msg.y == 0) {
-
+            } else if((msg.x == 0 || msg.y == 0) &&msg.command == MAV_CMD.MAV_CMD_CONDITION_YAW ) {//위도 경도가 0이고
+                Log.i(TAG,  "condition YAW waypoint에 설정한 index : "+currentWPIMindex);
+                Log.i(TAG,  "info : "+info.toString());
+//                actionInfos.add(info);
             } else{
 
-                actionInfos.add(info);
+//                actionInfos.add(info);
             }
+            Log.d(TAG, "==================================================="+i+"번째 아이템 " + "=======================================================");
         }
 
 
