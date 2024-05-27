@@ -680,7 +680,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-                                    //  startLiveStream();   //임시 주석처리
+                                      startLiveStream();   //임시 주석처리
 
 
                                 });

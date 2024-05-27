@@ -147,6 +147,10 @@ public class WpMissionManager {
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
                     Log.d(TAG, msg.toString());
+
+                    if(msg.z==0){
+                       break;
+                    }
                     if (msg.param1 > 0) { // 멈춤 시간이 1보다 크면
                         info.setActionType(WaylineActionType.HOVER);
                         ActionAircraftHoverParam param = new ActionAircraftHoverParam();
@@ -257,13 +261,14 @@ public class WpMissionManager {
 //                    ActionTakePhotoParam param = new ActionTakePhotoParam();
 //                    actionInfos.add(info);
 //                }
-
-
                 wpInfoModel.setActionInfos(actionInfos);
                 Log.i(TAG,  "wpInfoModel에 담긴"+wpInfoModel.getActionInfos());
-                mWLIMList.add(wpInfoModel); // 웨이포인트 인포 모델 리스트에 추가
 
-                currentWPIMindex++;
+                if(msg.z!=0) {//고도가 0 이상일 때만 저장하도록
+                    mWLIMList.add(wpInfoModel); // 웨이포인트 인포 모델 리스트에 추가
+                    currentWPIMindex++;
+                }
+
 
             } else if((msg.x == 0 || msg.y == 0) &&msg.command == MAV_CMD.MAV_CMD_CONDITION_YAW ) {//위도 경도가 0이고
                 Log.i(TAG,  "condition YAW waypoint에 설정한 index : "+currentWPIMindex);
@@ -282,11 +287,6 @@ public class WpMissionManager {
 
 
     public void saveKMZfile() {
-
-        for (int i = 0; i < mWLIMList.size(); i++) {
-            Log.i(TAG, "savekmzfile "+i + "번째 WaylineInfoModel의 Actioninfos: " + mWLIMList.get(i).getActionInfos().toString() + "\nWaylineWaypoint: " + mWLIMList.get(i).getWaylineWaypoint().toString());
-        }
-
         WPMZManager manager = WPMZManager.getInstance();
         WaylineMission wlm = KMZTestUtil.createWaylineMission();
         WaylineMissionConfig wlmc = KMZTestUtil.createMissionConfig();
@@ -299,13 +299,7 @@ public class WpMissionManager {
             file.delete();
         }
         manager.generateKMZFile(kmzOutPath, wlm, wlmc, template);
-        Log.i(TAG, "kmzFile saved directory: " + rootDir);
-        Log.i(TAG, "kmzFile validity check : " + manager.checkValidation(kmzOutPath).getValue().toString());
-        Log.i(TAG, "WaylineMissionParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionParseInfo().toString());
-        Log.i(TAG, "WaylineMissionConfigParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineMissionConfigParseInfo().toString());
-        Log.i(TAG, "WaylineTemplatesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineTemplatesParseInfo().toString());
-        Log.i(TAG, "WaylineWaylinesParseInfo" + manager.getKMZInfo("/storage/emulated/0/Android/data/com.dji.sampleV5.aircraft/files/DJI/waypoint/generate_test.kmz").getWaylineWaylinesParseInfo().toString());
-        this.mWLIMList.clear();
+         this.mWLIMList.clear();
 
     }
 

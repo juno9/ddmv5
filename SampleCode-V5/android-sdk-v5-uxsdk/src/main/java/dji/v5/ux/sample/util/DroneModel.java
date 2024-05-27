@@ -1302,17 +1302,11 @@ public class DroneModel {
 
     //웨이포인트 미션 시작 메소드
     public void startWaypointMission() {
-
-
         String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
         String kmzOutPath = rootDir + "generate_test.kmz";
         ArrayList wayline = new ArrayList<Integer>();
         wayline.add(0, 0);
 
-        Log.i(TAG, "available waylineIDs : " + WaypointMissionManager.getInstance().getAvailableWaylineIDs(rootDir).toString());
-
-
-        //임무 종료시 리스너 지워야 하는데 임무 종료 시점을 특정하지 못해 일단은 리스너들주석처리 해 둔 상태
         WaypointMissionManager.getInstance().addWaylineExecutingInfoListener(new WaylineExecutingInfoListener() {
             @Override
             public void onWaylineExecutingInfoUpdate(WaylineExecutingInfo excutingWaylineInfo) {
@@ -1333,27 +1327,25 @@ public class DroneModel {
         WaypointMissionManager.getInstance().addWaypointActionListener(new WaypointActionListener() {
             @Override
             public void onExecutionStart(int actionId) {
-                Log.i(TAG, "onExecutionStart actionId : " + actionId);
+//                Log.i(TAG, "onExecutionStart actionId : " + actionId);
             }
 
             @Override
             public void onExecutionFinish(int actionId, @Nullable IDJIError error) {
-                Log.i(TAG, "onExecutionFinish error : " + error.toString());
+//                Log.i(TAG, "onExecutionFinish error : " + error.toString());
             }
 
             @Override
             public void onExecutionStart(int actionGroup, int actionId) {
-                Log.i(TAG, "onExecutionStart actionGroup : " + actionGroup + " actionId : " + actionId);
+//                Log.i(TAG, "onExecutionStart actionGroup : " + actionGroup + " actionId : " + actionId);
             }
 
             @Override
             public void onExecutionFinish(int actionGroup, int actionId, @Nullable IDJIError error) {
-                Log.i(TAG, "onExecutionFinish actionGroup : " + actionGroup + " actionId : " + actionId + "error : " + error.toString());
+//                Log.i(TAG, "onExecutionFinish actionGroup : " + actionGroup + " actionId : " + actionId + "error : " + error.toString());
             }
         });
-
-
-        WaypointMissionManager.getInstance().startMission("generate_test", new CommonCallbacks.CompletionCallback() {
+        WaypointMissionManager.getInstance().startMission("generate_test_ddm", new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 Log.i(TAG, "WayPoint Mission Started" + "\n filename: " + FileUtils.getFileName(kmzOutPath, WAYPOINT_FILE_TAG));
