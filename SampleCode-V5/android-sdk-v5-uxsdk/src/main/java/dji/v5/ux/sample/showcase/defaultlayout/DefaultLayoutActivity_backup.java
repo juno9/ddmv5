@@ -38,6 +38,9 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.naver.maps.map.NaverMap;
+import com.naver.maps.map.UiSettings;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -172,7 +175,7 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
         horizontalSituationIndicatorWidget = findViewById(R.id.widget_horizontal_situation_indicator);
         gimbalAdjustDone = findViewById(R.id.fpv_gimbal_ok_btn);
         gimbalFineTuneWidget = findViewById(R.id.setting_menu_gimbal_fine_tune);
-        mapWidget = findViewById(R.id.widget_map);
+        mapWidget = findViewById(R.id.map_fragment);
         cameraControlsWidget.getExposureSettingsIndicatorWidget().setStateChangeResourceId(R.id.panel_camera_controls_exposure_settings);
 
         initClickListener();
@@ -197,6 +200,7 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
 
         //实现RTK监测网络，并自动重连机制
         DJINetworkManager.getInstance().addNetworkStatusListener(networkStatusListener);
+
 
     }
 

@@ -161,14 +161,14 @@
 
     <Spinner
         android:id="@+id/sp_map_switch"
-        android:layout_width="100dp"
-        android:layout_height="30dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:background="@drawable/bg_stroke_common_with_color"
         android:dropDownWidth="120dp"
         android:entries="@array/maps_array_all"
         android:spinnerMode="dropdown"
         android:textColor="@color/white"
-        android:visibility="gone"
+
         android:layout_marginLeft="10dp"
         app:layout_constraintBottom_toBottomOf="@+id/kmz_btn"
         app:layout_constraintStart_toEndOf="@+id/kmz_btn"

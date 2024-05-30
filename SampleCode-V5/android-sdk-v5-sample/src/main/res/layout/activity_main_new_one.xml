@@ -41,7 +41,8 @@
 
             <dji.sampleV5.aircraft.views.VersionInfoView
                 android:layout_width="match_parent"
-                android:layout_height="596dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
@@ -50,10 +51,10 @@
                 app:layout_constraintVertical_bias="0.0" />
 
             <Button
-                android:id="@+id/button5"
+                android:id="@+id/btn_sdk_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Button"
+                android:text="DJI SDK\nINFO"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.258"
@@ -62,10 +63,10 @@
                 app:layout_constraintVertical_bias="0.919" />
 
             <Button
-                android:id="@+id/button4"
+                android:id="@+id/btn_ddm_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Button"
+                android:text="DDM\nINFO"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.888"
@@ -142,6 +143,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
                         android:layout_margin="4dp"
+                        android:gravity="center"
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         tools:text="@string/sdk_version" />
@@ -152,6 +154,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
                         android:layout_margin="4dp"
+                        android:gravity="center"
                         android:text="@string/package_product_category"
                         android:textColor="@color/white"
                         android:textSize="14sp" />
@@ -162,6 +165,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
                         android:layout_margin="4dp"
+                        android:gravity="center"
                         android:text="@string/unregistered"
                         android:textColor="@color/white"
                         android:textSize="14sp" />
@@ -208,7 +212,8 @@
                         app:layout_constraintHorizontal_bias="0.888"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.882" />
+                        app:layout_constraintVertical_bias="0.882"
+                        android:layout_weight="5"/>
 
                     <Button
                         android:id="@+id/btn_settings"
@@ -220,29 +225,30 @@
                         app:layout_constraintHorizontal_bias="0.888"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.812" />
-                    <Button
-                        android:id="@+id/btn_widgets"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="widget"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.888"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.812" />
-                    <Button
-                        android:id="@+id/btn_testtools"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="test tools"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.888"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.812" />
+                        app:layout_constraintVertical_bias="0.812"
+                        android:layout_weight="5"/>
+<!--                    <Button-->
+<!--                        android:id="@+id/btn_widgets"-->
+<!--                        android:layout_width="match_parent"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:text="widget"-->
+<!--                        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--                        app:layout_constraintEnd_toEndOf="parent"-->
+<!--                        app:layout_constraintHorizontal_bias="0.888"-->
+<!--                        app:layout_constraintStart_toStartOf="parent"-->
+<!--                        app:layout_constraintTop_toTopOf="parent"-->
+<!--                        app:layout_constraintVertical_bias="0.812" />-->
+<!--                    <Button-->
+<!--                        android:id="@+id/btn_testtools"-->
+<!--                        android:layout_width="match_parent"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:text="test tools"-->
+<!--                        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--                        app:layout_constraintEnd_toEndOf="parent"-->
+<!--                        app:layout_constraintHorizontal_bias="0.888"-->
+<!--                        app:layout_constraintStart_toStartOf="parent"-->
+<!--                        app:layout_constraintTop_toTopOf="parent"-->
+<!--                        app:layout_constraintVertical_bias="0.812" />-->
                 </LinearLayout>
 
             </LinearLayout>

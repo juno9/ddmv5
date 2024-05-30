@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="@dimen/uxsdk_550_dp"
+    android:layout_height="@dimen/uxsdk_200_dp"
+    tools:context=".sample.showcase.defaultlayout.DefaultLayoutActivity">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center_vertical|start"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="RTMP address："
+
+                android:textColor="@color/uxsdk_black"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/edt_rtmpaddress"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/uxsdk_50_dp"
+
+                android:layout_margin="0dp" />
+
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center_vertical|start"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical|end"
+                android:text="Camera："
+                android:textColor="@color/uxsdk_black"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rg_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rb_camera_left"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="0"
+                    android:text="LEFT_MAIN"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_camera_right"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="1"
+                    android:text="RIGHT"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_camera_up"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="2"
+                    android:text="UP"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+
+                <RadioButton
+                    android:id="@+id/rb_camera_fpv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="3"
+                    android:text="FPV"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+            </RadioGroup>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center_vertical|start"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical|end"
+                android:text="Quality："
+                android:textColor="@color/uxsdk_black"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rg_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rb_quality_sd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="1"
+                    android:text="SD"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_quality_hd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="2"
+                    android:text="HD"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_quality_full_hd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:tag="3"
+                    android:text="FULL_HD"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+            </RadioGroup>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center_vertical|start"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical|end"
+                android:text="BitRate："
+                android:textColor="@color/uxsdk_black"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rg_bit_rate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rb_bit_rate_auto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:text="AUTO"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_bit_rate_manual"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/uxsdk_black"
+                    android:text="MANUAL"
+                    android:textColor="@color/uxsdk_black"
+                    android:textSize="11sp" />
+
+            </RadioGroup>
+
+            <SeekBar
+                android:id="@+id/sb_bit_rate"
+                android:layout_width="220dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+
+                android:max="100"
+                android:progress="0"
+                android:progressBackgroundTint="@color/uxsdk_black"
+                android:progressTint="@color/uxsdk_black"
+                android:thumbTint="@color/uxsdk_black"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tv_bit_rate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/uxsdk_black"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="5"
+                android:text="Start" />
+
+            <Button
+                android:id="@+id/btn_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="5"
+                android:text="Stop" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

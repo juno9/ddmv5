@@ -44,6 +44,10 @@
         <meta-data
             android:name="com.dji.sdk.API_KEY"
             android:value="9766d395086eb04b6f4c7303" />
+        <!--    네이버 지도 키    -->
+        <meta-data
+            android:name="com.naver.maps.map.CLIENT_ID"
+            android:value="w7qhky1q5i" />
 
         <activity
             android:name="dji.sampleV5.aircraft.DJIAircraftMainActivity"

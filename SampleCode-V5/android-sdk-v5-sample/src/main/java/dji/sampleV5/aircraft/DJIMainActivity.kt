@@ -28,8 +28,10 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_settings
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_start
-import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
-import kotlinx.android.synthetic.main.activity_main_new_one.btn_widgets
+
+//
+//import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
+//import kotlinx.android.synthetic.main.activity_main_new_one.btn_widgets
 
 /**
  * Class Description
@@ -85,6 +87,7 @@ abstract class DJIMainActivity : AppCompatActivity() {
             return
 
         }
+        btn_start.isEnabled = false
         btn_start.setOnClickListener {
             val nextIntent = Intent(this, DefaultLayoutActivity::class.java)
             startActivity(nextIntent)
@@ -93,18 +96,20 @@ abstract class DJIMainActivity : AppCompatActivity() {
             val nextIntent = Intent(this, SettingsActivity::class.java)
             startActivity(nextIntent)
         }
-        btn_widgets.setOnClickListener {
-            val nextIntent = Intent(this, WidgetsActivity::class.java)
-            startActivity(nextIntent)
-        }
-        btn_testtools.setOnClickListener {
-            val nextIntent = Intent(this, AircraftTestingToolsActivity::class.java)
-            startActivity(nextIntent)
-        }
+//        btn_widgets.setOnClickListener {
+//            val nextIntent = Intent(this, WidgetsActivity::class.java)
+//            startActivity(nextIntent)
+//        }
+//        btn_testtools.setOnClickListener {
+//            val nextIntent = Intent(this, AircraftTestingToolsActivity::class.java)
+//            startActivity(nextIntent)
+//        }
         window.decorView.apply {
             systemUiVisibility =
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         }
+
+
 
         initMSDKInfoView()
         observeSDKManager()
@@ -139,23 +144,25 @@ abstract class DJIMainActivity : AppCompatActivity() {
         msdkInfoVm.msdkInfo.observe(this) {
             text_view_version.text =
                 StringUtils.getResStr(R.string.sdk_version, it.SDKVersion + " " + it.buildVer)
+
+            if(!(it.productType.name=="UNKNOWN" || it.productType.name=="UNRECOGNIZED")){
+                btn_start.isEnabled = true
+            }else{
+                btn_start.isEnabled = false
+            }
             text_view_product_name.text =
                 StringUtils.getResStr(R.string.product_name, it.productType.name)
+
+
+
+
             text_view_package_product_category.text =
                 StringUtils.getResStr(R.string.package_product_category, it.packageProductCategory)
             text_view_is_debug.text = StringUtils.getResStr(R.string.is_sdk_debug, it.isDebug)
 //            text_core_info.text = it.coreInfo.toString()
         }
 
-//        icon_sdk_forum.setOnClickListener {
-//            Helper.startBrowser(this, StringUtils.getResStr(R.string.sdk_forum_url))
-//        }
-//        icon_release_node.setOnClickListener {
-//            Helper.startBrowser(this, StringUtils.getResStr(R.string.release_node_url))
-//        }
-//        icon_tech_support.setOnClickListener {
-//            Helper.startBrowser(this, StringUtils.getResStr(R.string.tech_support_url))
-//        }
+
         view_base_info.setOnClickListener {
             baseMainActivityVm.doPairing {
                 showToast(it)

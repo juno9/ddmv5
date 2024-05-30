@@ -24,9 +24,10 @@
 package dji.v5.ux.sample.showcase.defaultlayout;
 
 import static dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode.QUICK_SHOT;
-import static dji.v5.manager.datacenter.livestream.StreamQuality.FULL_HD;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.graphics.Color;
@@ -37,7 +38,11 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,14 +52,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentContainerView;
+import androidx.fragment.app.FragmentManager;
 
-import com.dji.wpmzsdk.common.data.Template;
-import com.dji.wpmzsdk.common.utils.kml.model.DroneCameraModel;
-import com.dji.wpmzsdk.manager.WPMZManager;
+import com.naver.maps.map.MapFragment;
+import com.naver.maps.map.NaverMap;
+import com.naver.maps.map.OnMapReadyCallback;
+import com.naver.maps.map.UiSettings;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -75,10 +82,7 @@ import java.util.concurrent.TimeUnit;
 import dji.sdk.keyvalue.value.airlink.VideoSourceEntity;
 import dji.sdk.keyvalue.value.common.CameraLensType;
 import dji.sdk.keyvalue.value.common.ComponentIndexType;
-import dji.sdk.keyvalue.value.common.LiveStreamingSettings;
 import dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode;
-import dji.sdk.wpmz.value.mission.WaylineMission;
-import dji.sdk.wpmz.value.mission.WaylineMissionConfig;
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.common.error.IDJIError;
 import dji.v5.common.video.channel.VideoChannelState;
@@ -92,6 +96,8 @@ import dji.v5.manager.datacenter.camera.CameraStreamManager;
 import dji.v5.manager.datacenter.livestream.LiveStreamManager;
 import dji.v5.manager.datacenter.livestream.LiveStreamSettings;
 import dji.v5.manager.datacenter.livestream.LiveStreamType;
+import dji.v5.manager.datacenter.livestream.LiveVideoBitrateMode;
+import dji.v5.manager.datacenter.livestream.StreamQuality;
 import dji.v5.manager.datacenter.livestream.settings.RtmpSettings;
 import dji.v5.network.DJINetworkManager;
 import dji.v5.network.IDJINetworkStatusListener;
@@ -128,14 +134,12 @@ import dji.v5.ux.core.widget.setting.SettingWidget;
 import dji.v5.ux.core.widget.simulator.SimulatorIndicatorWidget;
 import dji.v5.ux.core.widget.systemstatus.SystemStatusWidget;
 import dji.v5.ux.gimbal.GimbalFineTuneWidget;
-import dji.v5.ux.map.MapWidget;
-import dji.v5.ux.mapkit.core.maps.DJIUiSettings;
 import dji.v5.ux.sample.util.DroneModel;
 import dji.v5.ux.sample.util.MAVLinkReceiver;
 import dji.v5.ux.sample.util.MAVParam;
+import dji.v5.ux.sample.util.StreamDialog;
 import dji.v5.ux.sample.util.WpMissionManager;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
-import dji.v5.ux.utils.KMZTestUtil;
 import dji.v5.ux.visualcamera.CameraNDVIPanelWidget;
 import dji.v5.ux.visualcamera.CameraVisiblePanelWidget;
 import dji.v5.ux.visualcamera.zoom.FocalZoomWidget;
@@ -166,11 +170,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected CameraVisiblePanelWidget visualCameraPanel;
     protected FocalZoomWidget focalZoomWidget;
     protected SettingWidget settingWidget;
-    protected MapWidget mapWidget;
+    //    protected MapWidget mapWidget;
+    protected FragmentContainerView mapWidget;
     protected TopBarPanelWidget topBarPanel;
     protected ConstraintLayout fpvParentView;
     private DrawerLayout mDrawerLayout;
     private TextView gimbalAdjustDone;
+
     private GimbalFineTuneWidget gimbalFineTuneWidget;
     private ActiveTrackMode mode = QUICK_SHOT;
     private CompositeDisposable compositeDisposable;
@@ -202,9 +208,14 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private String mNewInbound = "";
     private String mNewDJI = "";
     String id, gcsip, gcsport;
+    private Button streamingButton;
+    StreamDialog streamDialog;
+    String streamAddress;
 
-    private LiveStreamManager iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
-    private CameraStreamManager iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
+
+    private LiveStreamManager iLiveStreamManager;
+    private CameraStreamManager iCameraStreamManager;
+    List<VideoSourceEntity> cameraList;
     //private DDMImageHandler mDDMImageHandler;
     //endregion
 
@@ -213,6 +224,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.uxsdk_activity_default_layout);
         fpvParentView = findViewById(R.id.fpv_holder);
         mDrawerLayout = findViewById(R.id.root_view);
@@ -236,8 +248,46 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         horizontalSituationIndicatorWidget = findViewById(R.id.widget_horizontal_situation_indicator);
         gimbalAdjustDone = findViewById(R.id.fpv_gimbal_ok_btn);
         gimbalFineTuneWidget = findViewById(R.id.setting_menu_gimbal_fine_tune);
-        mapWidget = findViewById(R.id.widget_map);
+        mapWidget = findViewById(R.id.map_fragment);
+        streamingButton = findViewById(R.id.btn_streaming);
         cameraControlsWidget.getExposureSettingsIndicatorWidget().setStateChangeResourceId(R.id.panel_camera_controls_exposure_settings);
+        iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
+        iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
+        streamDialog = new StreamDialog(this);
+        cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
+
+        streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
+            @Override
+            public void startBtnClicked() {
+                Log.i(TAG, "스타트버튼 눌림");
+                //이거 눌리면 ip값이랑 카메라값, 품질값 받아와서 실행해야 함.
+                startLiveStream();
+                streamDialog.dismiss();
+            }
+
+            @Override
+            public void stopBtnClicked() {
+                Log.i(TAG, "스탑버튼 눌림");
+                stopStream();
+                streamDialog.dismiss();
+            }
+
+            @Override
+            public void etdStreamAddress() {
+
+            }
+
+
+        });
+
+        streamDialog.setOnEditTextChangedListener(new StreamDialog.OnEditTextChangedListener() {
+            @Override
+            public void onEditTextChanged(String address) {
+                streamAddress = address;
+                prefs.edit().putString("pref_stream_address", address).apply();
+                prefs.edit().apply();
+            }
+        });
 
         initClickListener();
         MediaDataCenter.getInstance().getVideoStreamManager().addStreamSourcesListener(sources -> runOnUiThread(() -> updateFPVWidgetSource(sources)));
@@ -250,14 +300,33 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         secondaryFPVWidget.setSurfaceViewZOrderOnTop(true);
         secondaryFPVWidget.setSurfaceViewZOrderMediaOverlay(true);
 
-        mapWidget.initAMap(map -> {
-            // map.setOnMapClickListener(latLng -> onViewClick(mapWidget));
-            DJIUiSettings uiSetting = map.getUiSettings();
-            if (uiSetting != null) {
-                uiSetting.setZoomControlsEnabled(false);//hide zoom widget
+//        mapWidget.initAMap(map -> {
+//            // map.setOnMapClickListener(latLng -> onViewClick(mapWidget));
+//            DJIUiSettings uiSetting = map.getUiSettings();
+//            if (uiSetting != null) {
+//                uiSetting.setZoomControlsEnabled(false);//hide zoom widget
+//            }
+//        });
+//        mapWidget.onCreate(savedInstanceState);
+        FragmentManager fm = getSupportFragmentManager();
+        MapFragment mapFragment = (MapFragment) fm.findFragmentById(R.id.map_fragment);
+        if (mapFragment == null) {
+            mapFragment = MapFragment.newInstance();
+            fm.beginTransaction().add(R.id.map_fragment, mapFragment).commit();
+        }
+
+        mapFragment.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(@NonNull NaverMap naverMap) {
+                UiSettings uiSettings = naverMap.getUiSettings();
+                uiSettings.setCompassEnabled(false);
+                uiSettings.setLocationButtonEnabled(false);
+                uiSettings.setZoomControlEnabled(false);
+                uiSettings.setLogoClickEnabled(false);
             }
         });
-        mapWidget.onCreate(savedInstanceState);
+
+
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
 
         //实现RTK监测网络，并自动重连机制
@@ -266,13 +335,16 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity.this);
         id = prefs.getString("pref_drone_id", "19");
+        streamAddress = "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream";
         gcsip = prefs.getString("pref_gcs_ip", "127.0.0.1");
         gcsport = prefs.getString("pref_telem_port", "6760");
 
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
 
-
+        String streamAddress = prefs.getString("pref_stream_address", "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream");
+        prefs.edit().putString("pref_stream_address", streamAddress).apply();
+        prefs.edit().apply();
         mReceiver = new MAVLinkReceiver(this, mModel);
 
         wpMissionmanager = new WpMissionManager(mReceiver, mModel, this);
@@ -317,6 +389,116 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             }
 
         });
+        streamingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                streamDialog.show();
+                streamDialog.setStreamAddress(streamAddress);
+                streamDialog.getCameraGroup().removeAllViews();//카메라 리스트에 표출할 카메라 목록을 만들어주는거
+                for (int i = 0; i < cameraList.size(); i++) {
+                    RadioButton radioButton = new RadioButton(getApplicationContext());
+                    radioButton.setText(cameraList.get(i).getPosition().toString());
+                    streamDialog.getCameraGroup().addView(radioButton);
+                    if (i == 0) {
+                        radioButton.setChecked(true);
+                    }
+                }
+                streamDialog.getCameraGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {//카메라 목록중에 하나 선택했을때 어떻게 동작할지 정의하는 곳
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked tag :" + radioButton.getText());
+                                iLiveStreamManager.setCameraIndex(cameraList.get(i).getPosition());
+                                Log("checked position :" + cameraList.get(i).getPosition().toString());
+
+
+                            }
+                        }
+                    }
+                });
+                streamDialog.getQualityGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked tag :" + radioButton.getTag());
+                                switch (radioButton.getTag().toString()) {
+                                    case "1": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.SD);
+                                        break;
+                                    }
+                                    case "2": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.HD);
+                                        break;
+                                    }
+                                    case "3": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.FULL_HD);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+
+                    }
+                });
+                streamDialog.getBitrateGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked text:" + radioButton.getText());
+                                switch (radioButton.getText().toString()) {
+                                    case "MANUAL": {
+                                        streamDialog.getsbBitrate().setVisibility(View.VISIBLE);
+                                        streamDialog.getTvBitrate().setVisibility(View.VISIBLE);
+                                        iLiveStreamManager.setLiveVideoBitrateMode(LiveVideoBitrateMode.MANUAL);
+
+                                        streamDialog.getsbBitrate().setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                                            @Override
+                                            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                                                int bitrate = (int) (8 * 1024 * 2048 * (0.1 + 0.9 * streamDialog.getsbBitrate().getProgress() / (double) streamDialog.getsbBitrate().getMax()));
+                                                streamDialog.getTvBitrate().setText("Bitrate : " + bitrate + " kbps");
+                                                Log("bitrate : " + bitrate);
+
+                                            }
+
+                                            @Override
+                                            public void onStartTrackingTouch(SeekBar seekBar) {
+
+                                            }
+
+                                            @Override
+                                            public void onStopTrackingTouch(SeekBar seekBar) {
+                                                int bitrate = (int) (8 * 1024 * 2048 * (0.1 + 0.9 * streamDialog.getsbBitrate().getProgress() / (double) streamDialog.getsbBitrate().getMax()));
+                                                iLiveStreamManager.setLiveVideoBitrate(bitrate);
+
+                                            }
+                                        });
+                                        break;
+                                    }
+                                    case "AUTO": {
+                                        streamDialog.getsbBitrate().setVisibility(View.GONE);
+                                        streamDialog.getTvBitrate().setVisibility(View.GONE);
+                                        iLiveStreamManager.setLiveVideoBitrateMode(LiveVideoBitrateMode.AUTO);
+                                        break;
+                                    }
+                                }
+
+
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+
     }
 
     private void toggleRightDrawer() {
@@ -327,7 +509,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mapWidget.onDestroy();
+//        mapWidget.onDestroy();
         MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
@@ -349,7 +531,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mapWidget.onResume();
+//        mapWidget.onResume();
         compositeDisposable = new CompositeDisposable();
         compositeDisposable.add(systemStatusListPanelWidget.closeButtonPressed()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -386,7 +568,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             compositeDisposable.dispose();
             compositeDisposable = null;
         }
-        mapWidget.onPause();
+//        mapWidget.onPause();
         super.onPause();
         ViewUtil.setKeepScreen(this, false);
     }
@@ -680,7 +862,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-                                      startLiveStream();   //임시 주석처리
 
 
                                 });
@@ -781,34 +962,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             return 0;
         }
 
-        public void startLiveStream() {
-            //RTMP 스트리밍 기능 추가
-            List<VideoSourceEntity> list = mainActivityWeakReference.get().iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록 먼저 확인
-            mainActivityWeakReference.get().Log("비디오 리스트" + list.toString());
-
-            String rtmpUrl = "rtmp://drowdev.skymap.kr:1935/live/drone" + mainActivityWeakReference.get().id + ".stream";
-            LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
-                    .setLiveStreamType(LiveStreamType.RTMP)
-                    .setRtmpSettings(new RtmpSettings.Builder()
-                            .setUrl(rtmpUrl)
-                            .build()
-                    ).build();
-
-            mainActivityWeakReference.get().iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
-
-            mainActivityWeakReference.get().iLiveStreamManager.setCameraIndex(list.get(0).getPosition());//사용 가능한 카메라 목록에서 가장 먼저 잡히는 카메라에서 찍는 영상을 송출하도록 세팅
-            mainActivityWeakReference.get().iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
-                @Override
-                public void onSuccess() {
-                    mainActivityWeakReference.get().Log("스트리밍 시작함");
-                }
-
-                @Override
-                public void onFailure(@NonNull IDJIError idjiError) {
-                    mainActivityWeakReference.get().Log("스트리밍 못함");
-                }
-            });
-        }
 
         @Override
         protected void onPostExecute(Integer integer) {
@@ -1000,6 +1153,55 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
     }
 
+
+    public void startLiveStream() {
+        //RTMP 스트리밍 기능 추가
+
+
+        LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
+                .setLiveStreamType(LiveStreamType.RTMP)
+                .setRtmpSettings(new RtmpSettings.Builder()
+
+                        .setUrl(streamAddress)
+                        .build()
+                ).build();
+
+        iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
+
+
+        iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                streamingButton.setText("now\nstreaming");
+                toast("스트리밍 시작함");
+                Log("스트리밍 시작함");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                toast("스트리밍 못함");
+                Log("스트리밍 못함");
+            }
+        });
+    }
+
+    public void stopStream() {
+        iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                streamingButton.setText("start\nstream");
+                toast("스트리밍 멈춤");
+                Log("스트리밍 멈춤");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                toast("스트리밍 멈춤 실패");
+                Log("스트리밍 멈춤 실패");
+            }
+        });
+    }
+
     private void closeGCSCommunicator() {
         if (mGCSCommunicator != null) {
             mGCSCommunicator.cancel(true);
@@ -1027,4 +1229,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     public void toast(String input) {
         Toast.makeText(getApplicationContext(), input, Toast.LENGTH_SHORT).show();
     }
+
+
 }
