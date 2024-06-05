@@ -96,8 +96,8 @@ abstract class DJIMainActivity : AppCompatActivity() {
         }
 
 
-        getSharedPreferences("ddm_update_log", MODE_PRIVATE).edit().putString("ddm_update_log", R.string.ddm_update_log.toString()).apply()
-        btn_ddm_info.setText(getSharedPreferences("ddm_update_log", MODE_PRIVATE).getString("ddm_update_log", R.string.ddm_update_log.toString()))
+
+
         btn_sdk_info.setOnClickListener {
             if (ttv_sdk_info.visibility == View.GONE) {
                 ttv_sdk_info.visibility = View.VISIBLE
