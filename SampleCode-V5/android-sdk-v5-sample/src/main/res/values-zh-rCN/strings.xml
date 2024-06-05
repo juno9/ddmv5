@@ -470,4 +470,6 @@
     <string name="title_select_yuv_format">选择图片格式</string>
     <string name="title_select_yuv_format_ok">确定</string>
     <string name="title_select_yuv_format_cancel">取消</string>
+
+    <string name="ddm_update_log">업데이트 내역 없음</string>
 </resources>

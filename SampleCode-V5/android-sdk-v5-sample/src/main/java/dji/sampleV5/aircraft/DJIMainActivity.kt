@@ -26,11 +26,18 @@ import dji.v5.ux.sample.showcase.defaultlayout.SettingsActivity
 import dji.v5.ux.sample.showcase.widgetlist.WidgetsActivity
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main_new_one.btn_ddm_info
+import kotlinx.android.synthetic.main.activity_main_new_one.btn_sdk_info
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_settings
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_start
 
 //
-//import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
+import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
+
+import kotlinx.android.synthetic.main.activity_main_new_one.ttv_ddm_info
+import kotlinx.android.synthetic.main.activity_main_new_one.ttv_sdk_info
+
+
 //import kotlinx.android.synthetic.main.activity_main_new_one.btn_widgets
 
 /**
@@ -87,6 +94,22 @@ abstract class DJIMainActivity : AppCompatActivity() {
             return
 
         }
+
+
+        getSharedPreferences("ddm_update_log", MODE_PRIVATE).edit().putString("ddm_update_log", R.string.ddm_update_log.toString()).apply()
+        btn_ddm_info.setText(getSharedPreferences("ddm_update_log", MODE_PRIVATE).getString("ddm_update_log", R.string.ddm_update_log.toString()))
+        btn_sdk_info.setOnClickListener {
+            if (ttv_sdk_info.visibility == View.GONE) {
+                ttv_sdk_info.visibility = View.VISIBLE
+                ttv_ddm_info.visibility = View.GONE
+            }
+        }
+        btn_ddm_info.setOnClickListener {
+            if (ttv_ddm_info.visibility == View.GONE) {
+                ttv_ddm_info.visibility = View.VISIBLE
+                ttv_sdk_info.visibility = View.GONE
+            }
+        }
         btn_start.isEnabled = false
         btn_start.setOnClickListener {
             val nextIntent = Intent(this, DefaultLayoutActivity::class.java)
@@ -100,10 +123,10 @@ abstract class DJIMainActivity : AppCompatActivity() {
 //            val nextIntent = Intent(this, WidgetsActivity::class.java)
 //            startActivity(nextIntent)
 //        }
-//        btn_testtools.setOnClickListener {
-//            val nextIntent = Intent(this, AircraftTestingToolsActivity::class.java)
-//            startActivity(nextIntent)
-//        }
+        btn_testtools.setOnClickListener {
+            val nextIntent = Intent(this, AircraftTestingToolsActivity::class.java)
+            startActivity(nextIntent)
+        }
         window.decorView.apply {
             systemUiVisibility =
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -145,9 +168,9 @@ abstract class DJIMainActivity : AppCompatActivity() {
             text_view_version.text =
                 StringUtils.getResStr(R.string.sdk_version, it.SDKVersion + " " + it.buildVer)
 
-            if(!(it.productType.name=="UNKNOWN" || it.productType.name=="UNRECOGNIZED")){
+            if (!(it.productType.name == "UNKNOWN" || it.productType.name == "UNRECOGNIZED")) {
                 btn_start.isEnabled = true
-            }else{
+            } else {
                 btn_start.isEnabled = false
             }
             text_view_product_name.text =

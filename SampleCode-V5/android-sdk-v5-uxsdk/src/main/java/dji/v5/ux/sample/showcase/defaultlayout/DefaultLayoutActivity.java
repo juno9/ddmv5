@@ -315,7 +315,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             fm.beginTransaction().add(R.id.map_fragment, mapFragment).commit();
         }
 
-        mapFragment.getMapAsync(new OnMapReadyCallback() {
+        mapFragment.getMapAsync(new OnMapReadyCallback() {//네이버 지도는 일단 달아는 두지만 나중에 손 봐야 함. Vworld나 다른 무료 지도들을 활용해야하기 때문
             @Override
             public void onMapReady(@NonNull NaverMap naverMap) {
                 UiSettings uiSettings = naverMap.getUiSettings();

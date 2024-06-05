@@ -39,10 +39,33 @@
             android:layout_height="match_parent"
             android:layout_weight="5">
 
-            <dji.sampleV5.aircraft.views.VersionInfoView
+
+
+                <dji.sampleV5.aircraft.views.VersionInfoView
+                    android:id="@+id/ttv_sdk_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="20dp"
+                    android:layout_marginTop="30dp"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.0"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.0" />
+
+
+
+
+
+            <TextView
+                android:id="@+id/ttv_ddm_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginLeft="20dp"
+                android:layout_marginTop="30dp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
@@ -78,8 +101,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:layout_weight="5">
+            android:layout_weight="5"
+            android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -88,10 +111,10 @@
                 android:orientation="horizontal">
 
                 <ImageView
-                    android:layout_gravity="center"
                     android:id="@+id/imageView4"
                     android:layout_width="84dp"
                     android:layout_height="89dp"
+                    android:layout_gravity="center"
                     android:layout_weight="5"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -102,10 +125,10 @@
                     app:srcCompat="@drawable/drone01" />
 
                 <ImageView
-                    android:layout_gravity="center"
                     android:id="@+id/imageView3"
                     android:layout_width="92dp"
                     android:layout_height="68dp"
+                    android:layout_gravity="center"
                     android:layout_weight="5"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -126,10 +149,10 @@
                     android:id="@+id/view_base_info"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_weight="5"
                     android:background="@color/light_gray2"
                     android:orientation="vertical"
                     android:padding="16dp"
-                    android:layout_weight="5"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.0"
@@ -197,58 +220,58 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_weight="5">
+                    android:layout_weight="5"
+                    android:orientation="vertical">
 
 
                     <Button
                         android:id="@+id/btn_start"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Start"
                         android:layout_marginTop="20dp"
+                        android:layout_weight="5"
+                        android:text="Start"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintHorizontal_bias="0.888"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.882"
-                        android:layout_weight="5"/>
+                        app:layout_constraintVertical_bias="0.882" />
 
                     <Button
                         android:id="@+id/btn_settings"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_weight="5"
                         android:text="Settings"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintHorizontal_bias="0.888"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.812"
-                        android:layout_weight="5"/>
-<!--                    <Button-->
-<!--                        android:id="@+id/btn_widgets"-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="widget"-->
-<!--                        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--                        app:layout_constraintEnd_toEndOf="parent"-->
-<!--                        app:layout_constraintHorizontal_bias="0.888"-->
-<!--                        app:layout_constraintStart_toStartOf="parent"-->
-<!--                        app:layout_constraintTop_toTopOf="parent"-->
-<!--                        app:layout_constraintVertical_bias="0.812" />-->
-<!--                    <Button-->
-<!--                        android:id="@+id/btn_testtools"-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="test tools"-->
-<!--                        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--                        app:layout_constraintEnd_toEndOf="parent"-->
-<!--                        app:layout_constraintHorizontal_bias="0.888"-->
-<!--                        app:layout_constraintStart_toStartOf="parent"-->
-<!--                        app:layout_constraintTop_toTopOf="parent"-->
-<!--                        app:layout_constraintVertical_bias="0.812" />-->
+                        app:layout_constraintVertical_bias="0.812" />
+                    <!--                    <Button-->
+                    <!--                        android:id="@+id/btn_widgets"-->
+                    <!--                        android:layout_width="match_parent"-->
+                    <!--                        android:layout_height="wrap_content"-->
+                    <!--                        android:text="widget"-->
+                    <!--                        app:layout_constraintBottom_toBottomOf="parent"-->
+                    <!--                        app:layout_constraintEnd_toEndOf="parent"-->
+                    <!--                        app:layout_constraintHorizontal_bias="0.888"-->
+                    <!--                        app:layout_constraintStart_toStartOf="parent"-->
+                    <!--                        app:layout_constraintTop_toTopOf="parent"-->
+                    <!--                        app:layout_constraintVertical_bias="0.812" />-->
+                    <Button
+                        android:id="@+id/btn_testtools"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="test tools"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.888"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.812" />
                 </LinearLayout>
 
             </LinearLayout>

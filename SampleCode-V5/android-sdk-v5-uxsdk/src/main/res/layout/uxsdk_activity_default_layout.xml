@@ -277,7 +277,7 @@
             android:layout_height="wrap_content"
             android:text="start\nstream"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/widget_return_to_home" />
+            app:layout_constraintTop_toBottomOf="@+id/panel_top_bar" />
 
 
         <dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget
@@ -312,6 +312,8 @@
         <!--                    -->
         <!--                    />-->
 
+
+
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/map_fragment"
             android:name="com.naver.maps.map.MapFragment"
@@ -321,8 +323,8 @@
             android:layout_marginBottom="12dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-
             />
+
 
 
         <dji.v5.ux.core.panel.systemstatus.SystemStatusListPanelWidget
