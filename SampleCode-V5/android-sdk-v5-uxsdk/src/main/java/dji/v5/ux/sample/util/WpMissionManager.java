@@ -128,50 +128,45 @@ public class WpMissionManager {
     }
 
     protected void generateWLIMlist() {
-        WaylineWaypoint waypoint = null; // 웨이포인트 객체 초기화
-        WaylineActionInfo waitnginfo = new WaylineActionInfo();
+        // Initialize lists to store waypoints and actions
+        List<WaylineWaypoint> waypointList = new ArrayList<>();
+        List<WaylineActionInfo> actionInfos = new ArrayList<>(this.getmMissionItemList().size());
+        List<List<WaylineActionInfo>> actionInfosList = new ArrayList<>(this.getmMissionItemList().size());
 
-        boolean triggerDistanceEnabled = false;
-        int currentWPIMindex = 0; // WPIM 리스트에 추가될 인덱스
         boolean speedChanged = false;
         double defaultSpeed = 3.0;
         double changedSpeed = 0.0;
-        boolean isInfoWaiting = false;
 
+        // Loop through the mission items
         for (int i = 0; i < this.getmMissionItemList().size(); i++) {
-            Log.d(TAG, "==================================================="+i+"번째 아이템 " + "=======================================================");
-            msg_mission_item msg = this.getmMissionItemList().get(i); // 마브링크 미션 아이템 목록에서 DJI미션으로 변환할 메시지 꺼냄
-            waypoint = new WaylineWaypoint(); // 웨이포인트 객체 생성
-            WaylineActionInfo info = new WaylineActionInfo(); // 액션인포 객체 생성
-            List<WaylineActionInfo> actionInfos = new ArrayList<>(); // 여러 개의 actionInfo가 들어갈 리스트
+            Log.d(TAG, "\n===================================================" + i + "번째 아이템 " + "=======================================================");
+            msg_mission_item msg = this.getmMissionItemList().get(i);
+
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
-                    Log.d(TAG, msg.toString());
+                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0)) {
+                        Log.d(TAG, "Delay: " + msg.param1);
+                        WaylineActionInfo hoverAction = createHoverAction(msg.param1);
+                        actionInfos.add(hoverAction);
+                        actionInfosList.add(actionInfos);
 
-                    if(msg.z==0){
-                       break;
-                    }
-                    if (msg.param1 > 0) { // 멈춤 시간이 1보다 크면
-                        info.setActionType(WaylineActionType.HOVER);
-                        ActionAircraftHoverParam param = new ActionAircraftHoverParam();
-                        param.setHoverTime((double) msg.param1);
-                        info.setAircraftHoverParam(param);
-                        Log.d(TAG, "actionInfo: " + info.toString());
-                        actionInfos.add(info);
+                        WaylineWaypoint waypoint = createWaypoint(msg, speedChanged ? changedSpeed : defaultSpeed);
+                        addWaypointToList(waypoint, actionInfos);
+                    } else if (msg.z != 0) {
+                        Log.d(TAG, "Waypoint LAT: " + msg.x + ", LAN: " + msg.y + ", ALT: " + msg.z);
+                        WaylineWaypoint waypoint = createWaypoint(msg, speedChanged ? changedSpeed : defaultSpeed);
+                        List<WaylineActionInfo> nullactionInfos = new ArrayList<>(this.getmMissionItemList().size());
+                        addWaypointToList(waypoint, nullactionInfos);
+                        actionInfosList.add(nullactionInfos);
                     }
                     break;
+
                 case MAV_CMD.MAV_CMD_CONDITION_YAW:
-                    Log.d(TAG, msg.toString());
-                    if (msg.param1 > 0) { // Yaw 각도가 0보다 크면
-                        info.setActionType(WaylineActionType.ROTATE_YAW);
-                        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
-                        param.setHeading((double) msg.param1);
-                        param.setPathMode(WaylineWaypointYawPathMode.CLOCKWISE);
-                        info.setAircraftRotateYawParam(param);
-                        Log.d(TAG, "actionInfo: " + info.toString());
-                        isInfoWaiting =true;
-                        waitnginfo=info;
-                    }
+                    Log.d(TAG, "Condition Yaw: " + msg.param1);
+                    WaylineActionInfo yawAction = createYawAction(msg.param1);
+                    List<WaylineActionInfo> latestActions = actionInfosList.get(mWLIMList.size() - 1);
+                    latestActions.add(yawAction);
+                    updateWaypointActions(latestActions);
                     break;
 
                 case MAV_CMD.MAV_CMD_DO_CHANGE_SPEED:
@@ -216,7 +211,6 @@ public class WpMissionManager {
                     Log.d(TAG, "MAV_CMD_VIDEO_STOP_CAPTURE");
                     break;
 
-
                 case MAV_CMD.MAV_CMD_DO_DIGICAM_CONTROL:
                     Log.d(TAG, "MAV_CMD_DO_DIGICAM_CONTROL");
                     break;
@@ -230,62 +224,62 @@ public class WpMissionManager {
                     break;
             }
 
-            WaylineLocationCoordinate2D location = new WaylineLocationCoordinate2D((double) msg.x, (double) msg.y); // 위치값 생성
-            waypoint.setLocation(location); // 생성한 위치값을 웨이포인트의 위도와 경도로 설정
-            waypoint.setHeight((double) msg.z); // 웨이포인트의 고도 설정
-            waypoint.setEllipsoidHeight((double) msg.z); // 웨이포인트의 Ellipsoid 고도 설정
-
-            if (speedChanged) {
-                waypoint.setSpeed(changedSpeed);
-            } else {
-                waypoint.setSpeed(defaultSpeed);
-            }
-
-            waypoint.setUseGlobalTurnParam(true);
-            waypoint.setWaypointIndex(currentWPIMindex); // 웨이포인트 인덱스 설정
-            Log.i(TAG,  "waypoint에 설정한 index : "+currentWPIMindex);
-            WaypointInfoModel wpInfoModel = new WaypointInfoModel(); // 웨이포인트 인포 모델 객체 초기화
-
-            if (msg.command == MAV_CMD.MAV_CMD_NAV_WAYPOINT && (msg.x != 0 || msg.y != 0)) {//웨이포인트 명령어이고 위도, 경도가 0이 아닐 때
-                wpInfoModel.setWaylineWaypoint(waypoint);
-
-
-                if(isInfoWaiting){
-                    actionInfos.add(waitnginfo);
-                    waitnginfo=null;
-                    waitnginfo=new WaylineActionInfo();
-                    isInfoWaiting=false;
-                }
-//                if(actionInfos.size()==0 ){
-//                    info.setActionType(WaylineActionType.TAKE_PHOTO);
-//                    ActionTakePhotoParam param = new ActionTakePhotoParam();
-//                    actionInfos.add(info);
-//                }
-                wpInfoModel.setActionInfos(actionInfos);
-                Log.i(TAG,  "wpInfoModel에 담긴"+wpInfoModel.getActionInfos());
-
-                if(msg.z!=0) {//고도가 0 이상일 때만 저장하도록
-                    mWLIMList.add(wpInfoModel); // 웨이포인트 인포 모델 리스트에 추가
-                    currentWPIMindex++;
-                }
-
-
-            } else if((msg.x == 0 || msg.y == 0) &&msg.command == MAV_CMD.MAV_CMD_CONDITION_YAW ) {//위도 경도가 0이고
-                Log.i(TAG,  "condition YAW waypoint에 설정한 index : "+currentWPIMindex);
-                Log.i(TAG,  "info : "+info.toString());
-//                actionInfos.add(info);
-            } else{
-
-//                actionInfos.add(info);
-            }
-            Log.d(TAG, "==================================================="+i+"번째 아이템 " + "=======================================================");
+            Log.d(TAG, "===================================================" + i + "번째 아이템 " + "=======================================================\n");
         }
-
 
         this.saveKMZfile();
     }
 
+    // Helper method to create hover action
+    private WaylineActionInfo createHoverAction(double hoverTime) {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.HOVER);
+        ActionAircraftHoverParam param = new ActionAircraftHoverParam();
+        param.setHoverTime(hoverTime);
+        info.setAircraftHoverParam(param);
+        Log.d(TAG, "Hovering Action Created");
+        return info;
+    }
 
+    // Helper method to create waypoint
+    private WaylineWaypoint createWaypoint(msg_mission_item msg, double speed) {
+        WaylineWaypoint waypoint = new WaylineWaypoint();
+        WaylineLocationCoordinate2D location = new WaylineLocationCoordinate2D((double)msg.x, (double)msg.y);
+        waypoint.setLocation(location);
+        waypoint.setHeight((double)msg.z);
+        waypoint.setEllipsoidHeight((double)msg.z);
+        waypoint.setSpeed(speed);
+        waypoint.setUseGlobalTurnParam(true);
+        waypoint.setWaypointIndex(this.mWLIMList.size());
+        return waypoint;
+    }
+
+    // Helper method to add waypoint to list
+    private void addWaypointToList(WaylineWaypoint waypoint, List<WaylineActionInfo> actionInfos) {
+        WaypointInfoModel wpInfoModel = new WaypointInfoModel();
+        wpInfoModel.setWaylineWaypoint(waypoint);
+        wpInfoModel.setActionInfos(actionInfos);
+        mWLIMList.add(wpInfoModel);
+        Log.d(TAG, mWLIMList.size() - 1 + "번째 웨이포인트에 설정된 액션 : " + actionInfos.toString());
+    }
+
+    // Helper method to create yaw action
+    private WaylineActionInfo createYawAction(double heading) {
+        WaylineActionInfo info = new WaylineActionInfo();
+        info.setActionType(WaylineActionType.ROTATE_YAW);
+        ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
+        param.setHeading(heading);
+        param.setPathMode(WaylineWaypointYawPathMode.CLOCKWISE);
+        info.setAircraftRotateYawParam(param);
+        Log.d(TAG, "Condition Yaw Action Created");
+        return info;
+    }
+
+    // Helper method to update actions of the latest waypoint
+    private void updateWaypointActions(List<WaylineActionInfo> wactionInfos) {
+        mWLIMList.get(mWLIMList.size() - 1).setActionInfos(wactionInfos);
+        Log.d(TAG, mWLIMList.size() - 1 + "번째 웨이포인트에 설정된 액션 : " + wactionInfos.toString());
+    }
     public void saveKMZfile() {
         WPMZManager manager = WPMZManager.getInstance();
         WaylineMission wlm = KMZTestUtil.createWaylineMission();
@@ -299,7 +293,7 @@ public class WpMissionManager {
             file.delete();
         }
         manager.generateKMZFile(kmzOutPath, wlm, wlmc, template);
-         this.mWLIMList.clear();
+        this.mWLIMList.clear();
 
     }
 

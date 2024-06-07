@@ -97,7 +97,7 @@ abstract class DJIMainActivity : AppCompatActivity() {
 
 
 
-
+        ttv_ddm_info.setText("DDM Release Note")
         btn_sdk_info.setOnClickListener {
             if (ttv_sdk_info.visibility == View.GONE) {
                 ttv_sdk_info.visibility = View.VISIBLE
