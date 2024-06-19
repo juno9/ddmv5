@@ -144,7 +144,7 @@ public class WpMissionManager {
 
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
-                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0)) {
+                     if (msg.param1 > 0 && (msg.x != 0 && msg.y != 0 && msg.z !=0)) {
                         Log.d(TAG, "Delay: " + msg.param1);
                         WaylineActionInfo hoverAction = createHoverAction(msg.param1);
                         actionInfos.add(hoverAction);
