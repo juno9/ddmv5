@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import dji.sampleV5.aircraft.models.BaseMainActivityVm
+import dji.sampleV5.aircraft.models.LoginVM
 import dji.sampleV5.aircraft.models.MSDKInfoVm
 import dji.sampleV5.aircraft.models.MSDKManagerVM
 import dji.sampleV5.aircraft.models.globalViewModels
@@ -36,6 +37,10 @@ import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
 
 import kotlinx.android.synthetic.main.activity_main_new_one.ttv_ddm_info
 import kotlinx.android.synthetic.main.activity_main_new_one.ttv_sdk_info
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 
 
 //import kotlinx.android.synthetic.main.activity_main_new_one.btn_widgets
@@ -96,8 +101,9 @@ abstract class DJIMainActivity : AppCompatActivity() {
         }
 
 
-
-        ttv_ddm_info.setText("DDM Release Note")
+        val releaseNotes = readReleaseNotesFromFile()
+        ToastUtils.showToast(releaseNotes)
+        ttv_ddm_info.setText(releaseNotes)
         btn_sdk_info.setOnClickListener {
             if (ttv_sdk_info.visibility == View.GONE) {
                 ttv_sdk_info.visibility = View.VISIBLE
@@ -107,6 +113,7 @@ abstract class DJIMainActivity : AppCompatActivity() {
         btn_ddm_info.setOnClickListener {
             if (ttv_ddm_info.visibility == View.GONE) {
                 ttv_ddm_info.visibility = View.VISIBLE
+                LogUtils.i(releaseNotes)
                 ttv_sdk_info.visibility = View.GONE
             }
         }
@@ -227,7 +234,22 @@ abstract class DJIMainActivity : AppCompatActivity() {
             showToast("Database Download Progress current: ${resultPair.first}, total: ${resultPair.second}")
         }
     }
-
+    private fun readReleaseNotesFromFile(): String {
+        val releaseNotes = StringBuilder()
+        try {
+            val inputStream: InputStream = assets.open("ddm_release_note.txt")
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            var line: String? = reader.readLine()
+            while (line != null) {
+                releaseNotes.append(line).append("\n")
+                line = reader.readLine()
+            }
+            reader.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return releaseNotes.toString()
+    }
     private fun showToast(content: String) {
         ToastUtils.showToast(content)
 

@@ -70,11 +70,17 @@ public class WpMissionManager {
     }
 
     public ArrayList<WaypointInfoModel> initmWLIMList() {
+        if (mWLIMList != null) {
+            this.mWLIMList = null;
+        }
         this.mWLIMList = new ArrayList<>();
         return mWLIMList;
     }
 
     public ArrayList<msg_mission_item> iniMissionItemList() {
+        if (mMissionItemList != null) {
+            this.mMissionItemList = null;
+        }
         this.mMissionItemList = new ArrayList<>();
         return mMissionItemList;
     }
@@ -144,7 +150,7 @@ public class WpMissionManager {
 
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
-                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0)) {
+                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0 || msg.z != 0)) {
                         Log.d(TAG, "Delay: " + msg.param1);
                         WaylineActionInfo hoverAction = createHoverAction(msg.param1);
                         actionInfos.add(hoverAction);
@@ -244,10 +250,10 @@ public class WpMissionManager {
     // Helper method to create waypoint
     private WaylineWaypoint createWaypoint(msg_mission_item msg, double speed) {
         WaylineWaypoint waypoint = new WaylineWaypoint();
-        WaylineLocationCoordinate2D location = new WaylineLocationCoordinate2D((double)msg.x, (double)msg.y);
+        WaylineLocationCoordinate2D location = new WaylineLocationCoordinate2D((double) msg.x, (double) msg.y);
         waypoint.setLocation(location);
-        waypoint.setHeight((double)msg.z);
-        waypoint.setEllipsoidHeight((double)msg.z);
+        waypoint.setHeight((double) msg.z);
+        waypoint.setEllipsoidHeight((double) msg.z);
         waypoint.setSpeed(speed);
         waypoint.setUseGlobalTurnParam(true);
         waypoint.setWaypointIndex(this.mWLIMList.size());
@@ -280,6 +286,7 @@ public class WpMissionManager {
         mWLIMList.get(mWLIMList.size() - 1).setActionInfos(wactionInfos);
         Log.d(TAG, mWLIMList.size() - 1 + "번째 웨이포인트에 설정된 액션 : " + wactionInfos.toString());
     }
+
     public void saveKMZfile() {
         WPMZManager manager = WPMZManager.getInstance();
         WaylineMission wlm = KMZTestUtil.createWaylineMission();

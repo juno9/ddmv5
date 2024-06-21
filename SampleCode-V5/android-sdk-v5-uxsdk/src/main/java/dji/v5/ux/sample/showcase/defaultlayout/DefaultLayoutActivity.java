@@ -55,10 +55,12 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentContainerView;
 import androidx.fragment.app.FragmentManager;
 
+import com.naver.maps.geometry.LatLng;
 import com.naver.maps.map.MapFragment;
 import com.naver.maps.map.NaverMap;
 import com.naver.maps.map.OnMapReadyCallback;
 import com.naver.maps.map.UiSettings;
+import com.naver.maps.map.overlay.Marker;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -323,6 +325,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 uiSettings.setLocationButtonEnabled(false);
                 uiSettings.setZoomControlEnabled(false);
                 uiSettings.setLogoClickEnabled(false);
+                Marker marker = new Marker();//마커 생성
+                marker.setPosition(new LatLng(mModel.get_current_lat(),mModel.get_current_lon()));//마커
             }
         });
 
