@@ -95,4 +95,6 @@ ext {
     //navermaps
     deps.navermap= 'com.naver.maps:map-sdk:3.18.0'
 
+    deps.mattv3='org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+
 }

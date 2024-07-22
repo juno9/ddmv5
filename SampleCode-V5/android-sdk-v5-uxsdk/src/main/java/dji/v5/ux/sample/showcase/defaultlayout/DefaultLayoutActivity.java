@@ -24,6 +24,7 @@
 package dji.v5.ux.sample.showcase.defaultlayout;
 
 import static dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode.QUICK_SHOT;
+import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -76,6 +77,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -101,6 +103,7 @@ import dji.v5.manager.datacenter.livestream.LiveStreamType;
 import dji.v5.manager.datacenter.livestream.LiveVideoBitrateMode;
 import dji.v5.manager.datacenter.livestream.StreamQuality;
 import dji.v5.manager.datacenter.livestream.settings.RtmpSettings;
+import dji.v5.manager.interfaces.ICameraStreamManager;
 import dji.v5.network.DJINetworkManager;
 import dji.v5.network.IDJINetworkStatusListener;
 import dji.v5.utils.common.JsonUtil;
@@ -136,11 +139,13 @@ import dji.v5.ux.core.widget.setting.SettingWidget;
 import dji.v5.ux.core.widget.simulator.SimulatorIndicatorWidget;
 import dji.v5.ux.core.widget.systemstatus.SystemStatusWidget;
 import dji.v5.ux.gimbal.GimbalFineTuneWidget;
+import dji.v5.ux.sample.util.DDMMqttClient;
 import dji.v5.ux.sample.util.DroneModel;
 import dji.v5.ux.sample.util.MAVLinkReceiver;
 import dji.v5.ux.sample.util.MAVParam;
 import dji.v5.ux.sample.util.StreamDialog;
 import dji.v5.ux.sample.util.WpMissionManager;
+import dji.v5.ux.sample.util.video.DDMImageHandler;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
 import dji.v5.ux.visualcamera.CameraNDVIPanelWidget;
 import dji.v5.ux.visualcamera.CameraVisiblePanelWidget;
@@ -213,7 +218,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private Button streamingButton;
     StreamDialog streamDialog;
     String streamAddress;
-
+    DDMImageHandler ddmImageHandler;
 
     private LiveStreamManager iLiveStreamManager;
     private CameraStreamManager iCameraStreamManager;
@@ -257,6 +262,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
         streamDialog = new StreamDialog(this);
         cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
+
+
+
 
         streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
             @Override
@@ -326,7 +334,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 uiSettings.setZoomControlEnabled(false);
                 uiSettings.setLogoClickEnabled(false);
                 Marker marker = new Marker();//마커 생성
-                marker.setPosition(new LatLng(mModel.get_current_lat(),mModel.get_current_lon()));//마커
+                marker.setPosition(new LatLng(mModel.get_current_lat(), mModel.get_current_lon()));//마커
             }
         });
 
@@ -346,6 +354,22 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
 
+        //mqtt메시지 보내는 코드 정상동작 확인 240711자
+        Thread mqttTestThread = new Thread(() -> {
+            try {
+                DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
+
+                while (true) {
+
+                    mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
+                    mModel.takePhoto();
+                    Thread.sleep(5000);
+                }
+            } catch (Exception e) {
+                Log.i(TAG, "exception : " + e.toString());
+            }
+        });
+        mqttTestThread.start();
         String streamAddress = prefs.getString("pref_stream_address", "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream");
         prefs.edit().putString("pref_stream_address", streamAddress).apply();
         prefs.edit().apply();
@@ -356,6 +380,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         mGCSCommunicator = new GCSCommunicatorAsyncTask(this);
         mGCSCommunicator.execute();
+
+        ddmImageHandler = new DDMImageHandler(this, mModel, primaryFpvWidget.getWidth(), primaryFpvWidget.getHeight());
+        CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
+
     }
 
     private void isGimableAdjustClicked(BroadcastValues broadcastValues) {
@@ -794,7 +822,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            if (mainActivityWeakReference.get().mModel == null) {
+            if (mainActivityWeakReference.get().mModel == null && mainActivityWeakReference.get().mModel.isTcpWorker) {
             } else {
                 mainActivityWeakReference.get().mModel.tick();
             }
@@ -838,6 +866,12 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 GCSSenderTimerTask gcsSender = new GCSSenderTimerTask(mainActivityWeakReference);
                 timer = new Timer(true);
                 timer.scheduleAtFixedRate(gcsSender, 0, 100);
+
+
+//                CameraImageSenderTimerTask cameraImageSenderTimerTask = new CameraImageSenderTimerTask(mainActivityWeakReference);
+//                timer = new Timer(true);
+//                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 2000); // 2000
+
 
 
                 while (!isCancelled()) {
@@ -1002,14 +1036,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         private void createTelemfetryTcpOutSocket() {// GCS와 연결하는 부분
             close();
 
-            String gcsIPString = "223.130.122.222";
+            String gcsIPString = "223.130.163.167";
 
             if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false)) {
                 gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
             }
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
-//            gcsIPString = "223.130.163.167"; //"220.79.19.247";// 현재 GCS IP 주소 하드코딩으로 입력해 둔 상태
-//            int telemIPPort = 6760;// 현재 GCS PORT 하드코딩으로 입력해 둔 상태
+
 
             Log.d(TAG, "gcsIPString :: Host-IP:" + gcsIPString + " HostPort:" + telemIPPort);
 
@@ -1035,7 +1068,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 mainActivityWeakReference.get().bufferIn = new BufferedInputStream(mainActivityWeakReference.get().in);
 
                 Log.d(TAG, "mTcpSocket :: Success. Received-IP:" + mainActivityWeakReference.get().isa.getAddress() + " / Received-localport:" + mainActivityWeakReference.get().isa.getPort());
-
+                mainActivityWeakReference.get().mModel.isTcpWorker = true;
                 // exist Udp Out
 //                mainActivityWeakReference.get().socket = new DatagramSocket();
 //                mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);
@@ -1083,7 +1116,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         private void createTelemetrySocket() {
             close();
 
-            String gcsIPString = "223.130.163.16";
+            String gcsIPString = "223.130.163.167";
 
 //            임시 주석처리
             if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
@@ -1091,8 +1124,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
 
 
-//            gcsIPString = "223.130.163.666";
-//            int telemIPPort = 6760;
+
             try {
                 mainActivityWeakReference.get().socket = new DatagramSocket();
                 mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);
@@ -1157,6 +1189,20 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
     }
 
+    private static class CameraImageSenderTimerTask extends TimerTask {
+
+        private WeakReference<DefaultLayoutActivity> mainActivityWeakReference;
+
+        CameraImageSenderTimerTask(WeakReference<DefaultLayoutActivity> mainActivityWeakReference) {
+            this.mainActivityWeakReference = mainActivityWeakReference;
+        }
+
+        @Override
+        public void run() {
+            if (mainActivityWeakReference.get().ddmImageHandler != null)
+                mainActivityWeakReference.get().ddmImageHandler.tick();
+        }
+    }
 
     public void startLiveStream() {
         //RTMP 스트리밍 기능 추가
@@ -1195,13 +1241,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             public void onSuccess() {
                 streamingButton.setText("start\nstream");
                 toast("스트리밍 멈춤");
-                Log("스트리밍 멈춤");
+
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
                 toast("스트리밍 멈춤 실패");
-                Log("스트리밍 멈춤 실패");
+
             }
         });
     }

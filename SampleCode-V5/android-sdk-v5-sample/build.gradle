@@ -125,6 +125,7 @@ dependencies {
     implementation deps.rx3Kt
     implementation deps.dom
     implementation deps.navermap
+
     kapt deps.glidecompiler
 
 }

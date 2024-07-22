@@ -308,14 +308,17 @@ open class FPVWidget @JvmOverloads constructor(
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         // do nothing
+        LogUtils.i("FPVWidget","surfaceCreated")
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         updateVideoDecoder(holder.surface, width, height)
+        LogUtils.i("FPVWidget","surfaceChanged")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         updateVideoDecoder(null, 0, 0)
+        LogUtils.i("FPVWidget","surfaceDestroyed")
     }
 
     private fun updateVideoDecoder(surface: Surface?, width: Int, height: Int) {
@@ -405,7 +408,7 @@ open class FPVWidget @JvmOverloads constructor(
     }
 
     private fun delayCalculator() {
-        //后面补充
+        //추후 추가 예정
     }
 
     private fun updateCameraName(cameraName: String) {

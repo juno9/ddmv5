@@ -3,6 +3,9 @@ package dji.v5.ux.sample.util;
 import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_FOCUS;
 import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_ZOOM;
 import static java.lang.Thread.sleep;
+import static dji.sdk.keyvalue.value.camera.CameraMode.PHOTO_HIGH_RESOLUTION;
+import static dji.sdk.keyvalue.value.camera.CameraMode.PHOTO_NORMAL;
+import static dji.sdk.keyvalue.value.camera.CameraStorageLocation.INTERNAL;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ACTIVE_TRACK;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_HOVER;
 import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_LIMITED;
@@ -27,6 +30,7 @@ import androidx.annotation.Nullable;
 
 import com.dji.industry.mission.natives.util.NativeCallbackUtils;
 import com.dji.industry.mission.waypointv2.gimbal.Rotation;
+import com.google.android.gms.common.internal.service.Common;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,13 +50,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import dji.sdk.keyvalue.converter.SingleValueConverter;
 import dji.sdk.keyvalue.key.AirLinkKey;
 import dji.sdk.keyvalue.key.BatteryKey;
+import dji.sdk.keyvalue.key.CameraKey;
+import dji.sdk.keyvalue.key.DJIActionKeyInfo;
 import dji.sdk.keyvalue.key.DJIKey;
 import dji.sdk.keyvalue.key.DJIKeyInfo;
 import dji.sdk.keyvalue.key.FlightControllerKey;
 import dji.sdk.keyvalue.key.GimbalKey;
 import dji.sdk.keyvalue.key.KeyTools;
 import dji.sdk.keyvalue.key.RemoteControllerKey;
+import dji.sdk.keyvalue.value.camera.CameraStorageInfos;
+import dji.sdk.keyvalue.value.camera.CameraStorageLocation;
+import dji.sdk.keyvalue.value.camera.CameraStorageStateMsg;
+import dji.sdk.keyvalue.value.camera.GeneratedMediaFileInfo;
 import dji.sdk.keyvalue.value.common.Attitude;
+import dji.sdk.keyvalue.value.common.ComponentIndexType;
 import dji.sdk.keyvalue.value.common.EmptyMsg;
 import dji.sdk.keyvalue.value.common.LocationCoordinate2D;
 import dji.sdk.keyvalue.value.common.LocationCoordinate3D;
@@ -63,6 +74,9 @@ import dji.sdk.keyvalue.value.flightcontroller.RollPitchControlMode;
 import dji.sdk.keyvalue.value.flightcontroller.VerticalControlMode;
 import dji.sdk.keyvalue.value.flightcontroller.VirtualStickFlightControlParam;
 import dji.sdk.keyvalue.value.flightcontroller.YawControlMode;
+import dji.sdk.keyvalue.value.gimbal.GimbalAngleRotation;
+import dji.sdk.keyvalue.value.gimbal.GimbalAngleRotationMode;
+import dji.sdk.keyvalue.value.gimbal.GimbalMode;
 import dji.sdk.keyvalue.value.mission.Waypoint;
 import dji.sdk.keyvalue.value.mission.Wayline;
 import dji.sdk.keyvalue.value.mission.WaypointAction;
@@ -79,7 +93,12 @@ import dji.v5.manager.aircraft.waypoint3.WaypointMissionExecuteStateListener;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.manager.aircraft.waypoint3.model.WaylineExecutingInfo;
 import dji.v5.manager.aircraft.waypoint3.model.WaypointMissionExecuteState;
+import dji.v5.manager.datacenter.camera.CameraStreamManager;
+import dji.v5.manager.datacenter.camera.StreamInfo;
+import dji.v5.manager.datacenter.media.MediaFileListDataSource;
+import dji.v5.manager.interfaces.ICameraStreamManager;
 import dji.v5.manager.interfaces.IKeyManager;
+import dji.v5.manager.interfaces.IMediaManager;
 import dji.v5.utils.common.ContextUtil;
 import dji.v5.utils.common.DiskUtil;
 import dji.v5.utils.common.FileUtils;
@@ -119,6 +138,7 @@ import dji.v5.ux.MAVLink.enums.MAV_STATE;
 import dji.v5.ux.MAVLink.enums.MAV_TYPE;
 import dji.v5.ux.R;
 import dji.v5.ux.core.base.DJISDKModel;
+import dji.v5.ux.core.communication.CameraKeys;
 import dji.v5.ux.core.communication.ObservableInMemoryKeyedStore;
 import dji.v5.ux.core.util.DataProcessor;
 import dji.v5.ux.core.widget.battery.BatteryInfoWidgetModel;
@@ -161,9 +181,9 @@ public class DroneModel {
         return mLongitude;
     }
 
-    public float get_current_alt() {
+    public double get_current_alt() {
 
-        return (float) mAlt;
+        return mAlt;
     }
 
     public void setSystemId(int id) {
@@ -172,7 +192,7 @@ public class DroneModel {
 
     void setRTLAltitude(final int altitude) {
 
-        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyGoHomeHeight), altitude, new CommonCallbacks.CompletionCallback() {
+        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyGoHomeHeight), altitude, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 ////parent.Log("RTL altitude set to " + altitude + "m");
@@ -189,7 +209,7 @@ public class DroneModel {
 
     void setMaxHeight(final int height) {
 
-        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyLimitMaxFlightHeightInMeter), height, new CommonCallbacks.CompletionCallback() {
+        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyLimitMaxFlightHeightInMeter), height, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 ////parent.Log("Max height set to " + height + "m");
@@ -205,7 +225,7 @@ public class DroneModel {
 
     void do_takeoff(float alt) {
         mAutonomy = false;
-        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyTakeoffLocationAltitude), (double) alt, new CommonCallbacks.CompletionCallback() {
+        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyTakeoffLocationAltitude), (double) alt, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 parent.Log("set takeoff alt : " + String.valueOf(alt));
@@ -216,7 +236,8 @@ public class DroneModel {
                 parent.Log("Error setting takeoff alt " + idjiError.description().toString());
             }
         });//이륙할 고도를 먼저 세팅
-        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyStartTakeoff), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
+
+        keyManager.performAction(KeyTools.createKey(FlightControllerKey.KeyStartTakeoff), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
             @Override
             public void onSuccess(EmptyMsg emptyMsg) {
                 parent.Log("start takeoff success ");
@@ -227,7 +248,16 @@ public class DroneModel {
                 parent.Log("takeoff failed " + idjiError.description().toString());
             }
         });
+
+
         Log.d(TAG, "Takeoff started...");
+    }
+
+    void armMotors() {
+
+    }
+
+    void disarmMotors() {
     }
 
     private void send_heartbeat() {
@@ -516,7 +546,7 @@ public class DroneModel {
         // TODO msg.epv
         // TODO msg.vel
         // TODO msg.cog
-        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyGPSSatelliteCount), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
+        keyManager.getValue(KeyTools.createKey(FlightControllerKey.KeyGPSSatelliteCount), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
             @Override
             public void onSuccess(Integer integer) {
                 msg.satellites_visible = integer.shortValue();
@@ -531,7 +561,7 @@ public class DroneModel {
         // DJI reports signal quality on a scale of 1-5
         // Mavlink has separate codes for fix type.
         final GPSSignalLevel[] gpsLevel = new GPSSignalLevel[1];
-        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyGPSSignalLevel), new CommonCallbacks.CompletionCallbackWithParam<GPSSignalLevel>() {
+        keyManager.getValue(KeyTools.createKey(FlightControllerKey.KeyGPSSignalLevel), new CommonCallbacks.CompletionCallbackWithParam<GPSSignalLevel>() {
             @Override
             public void onSuccess(GPSSignalLevel gpsSignalLevel) {
                 gpsLevel[0] = gpsSignalLevel;
@@ -624,7 +654,6 @@ public class DroneModel {
         msg.current_consumed = mCFullChargeCapacity_mAh - mCChargeRemaining_mAh;
         msg.voltages = mCellVoltages;
         float mBatteryTemp_C = 0;
-
         msg.temperature = (short) (mCBatteryTemp_C * 100);
         msg.current_battery = (short) (mCCurrent_mA * 10);
         msg.battery_remaining = (byte) ((float) mCChargeRemaining_mAh / (float) mCFullChargeCapacity_mAh * 100.0);
@@ -665,7 +694,7 @@ public class DroneModel {
     void set_home_position(double lat, double lon) {
 
 
-        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyHomeLocation), new LocationCoordinate2D(lat, lon), new CommonCallbacks.CompletionCallback() {
+        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyHomeLocation), new LocationCoordinate2D(lat, lon), new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 parent.Log("set_home_position Done");
@@ -854,7 +883,7 @@ public class DroneModel {
 //                    case "DJI_CTRL_MODE":
 //                        if (param.getParamValue() == 0)
 //
-//                        KeyManager.getInstance().setValue(KeyTools.createKey(FlightControllerKey.KeyFlightMode), FlightMode.MANUAL, new CommonCallbacks.CompletionCallback() {
+//                        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyFlightMode), FlightMode.MANUAL, new CommonCallbacks.CompletionCallback() {
 //                            @Override
 //                            public void onSuccess() {
 //
@@ -1676,12 +1705,80 @@ public class DroneModel {
         sendMessage(msg);
     }
 
+
+    public void getStorageInfo() {
+
+
+    }
+
+    public void takePhoto() {
+
+        keyManager.setValue(KeyTools.createKey(CameraKey.KeyCameraMode), PHOTO_NORMAL, new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("KeyCameraMode done ");
+
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("KeyCameraMode Error :  " + idjiError);
+            }
+        });
+
+        keyManager.performAction(KeyTools.createKey(CameraKey.KeyStartShootPhoto), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
+            @Override
+            public void onSuccess(EmptyMsg emptyMsg) {
+                parent.Log("KeyStartShootPhoto done");
+                keyManager.performAction(KeyTools.createKey(CameraKey.KeyStopShootPhoto), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
+                    @Override
+                    public void onSuccess(EmptyMsg emptyMsg) {
+                        parent.Log("KeyStopShootPhoto done");
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull IDJIError idjiError) {
+                        parent.Log("KeyStopShootPhoto Error :  " + idjiError);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("KeyStartShootPhoto Error :  " + idjiError);
+            }
+        });
+
+    }
+
+    public void setGimbalRotation(double degree) {//입력한 각도에 따라 짐벌 세팅
+
+
+        GimbalAngleRotation angleRotation = new GimbalAngleRotation();
+        angleRotation.setPitch(degree);
+        angleRotation.setYaw((double) 0);
+        angleRotation.setRoll((double) 0);
+        keyManager.performAction(KeyTools.createKey(GimbalKey.KeyRotateByAngle), angleRotation, new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
+            @Override
+            public void onSuccess(EmptyMsg emptyMsg) {
+                parent.Log("KeyRotateByAngle done : " + degree);
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("KeyRotateByAngle Error :  " + idjiError);
+            }
+        });
+
+
+    }
+
     public boolean isIntervalControl() {
         return this.doImageInterval;
     }
 
     public void listen3DLocation() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyAircraftLocation3D), this, new CommonCallbacks.KeyListener<LocationCoordinate3D>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyAircraftLocation3D), this, new CommonCallbacks.KeyListener<LocationCoordinate3D>() {
             @Override
             public void onValueChange(@Nullable LocationCoordinate3D oldValue, @Nullable LocationCoordinate3D newValue) {
                 if (newValue != null) {
@@ -1697,7 +1794,7 @@ public class DroneModel {
 
     public void listenRemoteControllerSticks() {
 
-        KeyManager.getInstance().getValue(KeyTools.createKey(RemoteControllerKey.KeyStickLeftVertical), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
+        keyManager.getValue(KeyTools.createKey(RemoteControllerKey.KeyStickLeftVertical), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
             @Override
             public void onSuccess(Integer integer) {
                 mThrottleSetting = (int) integer;
@@ -1710,42 +1807,42 @@ public class DroneModel {
             }
         });
 
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickLeftVertical), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyStickLeftVertical), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mLeftStickVertical = (int) (t1 * 0.8) + 1500;
                 //parent.Log("listenRemoteControllerSticks() %5% mLeftStickVertical : " + mLeftStickVertical);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickLeftHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyStickLeftHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mLeftStickHorisontal = (int) (t1 * 0.8) + 1500;
                 //parent.Log("listenRemoteControllerSticks() %6% mLeftStickHorisontal : " + mLeftStickHorisontal);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightVertical), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightVertical), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mRightStickVertical = (int) (t1 * 0.8) + 1500;
                 //parent.Log("listenRemoteControllerSticks() %7% mRightStickVertical : " + mRightStickVertical);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyStickRightHorizontal), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mRightStickHorisontal = (int) (t1 * 0.8) + 1500;
                 //parent.Log("listenRemoteControllerSticks() %8% mRightStickHorisontal : " + mRightStickHorisontal);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton1Down), this, new CommonCallbacks.KeyListener<Boolean>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton1Down), this, new CommonCallbacks.KeyListener<Boolean>() {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC1 = t1;
                 //parent.Log("listenRemoteControllerSticks() %9% mC1 clicked : " + mC1);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton2Down), this, new CommonCallbacks.KeyListener<Boolean>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton2Down), this, new CommonCallbacks.KeyListener<Boolean>() {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC2 = t1;
@@ -1753,7 +1850,7 @@ public class DroneModel {
             }
         });
 
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton3Down), this, new CommonCallbacks.KeyListener<Boolean>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyCustomButton3Down), this, new CommonCallbacks.KeyListener<Boolean>() {
             @Override
             public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                 mC3 = t1;
@@ -1764,7 +1861,7 @@ public class DroneModel {
     }
 
     public void listenIsMotorOn() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyAreMotorsOn), this, new CommonCallbacks.KeyListener<Boolean>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyAreMotorsOn), this, new CommonCallbacks.KeyListener<Boolean>() {
                     @Override
                     public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                         if (t1 != null) {
@@ -1780,7 +1877,7 @@ public class DroneModel {
 
 
     public void listenAttitude() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyAircraftAttitude), this, new CommonCallbacks.KeyListener<Attitude>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyAircraftAttitude), this, new CommonCallbacks.KeyListener<Attitude>() {
             @Override
             public void onValueChange(@Nullable Attitude attitude, @Nullable Attitude t1) {
                 if (t1 != null) {
@@ -1794,17 +1891,28 @@ public class DroneModel {
         });
     }
 
+    public double getmRoll() {
+        return mRoll;
+    }
+
+    public double getmPitch() {
+        return mPitch;
+    }
+
+    public double getmYaw() {
+        return mYaw;
+    }
 
     public void listenDroneBattery() {
 
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyChargeRemaining), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyChargeRemaining), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCChargeRemaining_mAh = (int) t1;
                 //parent.Log("%16% mCChargeRemaining_mAh : " + mCChargeRemaining_mAh);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyCellVoltages), this, new CommonCallbacks.KeyListener<List<Integer>>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyCellVoltages), this, new CommonCallbacks.KeyListener<List<Integer>>() {
             @Override
             public void onValueChange(@Nullable List<Integer> integers, @Nullable List<Integer> t1) {
                 for (int i = 0; i < t1.size(); i++) {
@@ -1813,21 +1921,21 @@ public class DroneModel {
                 }
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyVoltage), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyVoltage), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCVoltage_mV = t1;
                 //parent.Log("%18% mCVoltage_mV : " + mCVoltage_mV);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyChargeRemainingInPercent), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyChargeRemainingInPercent), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCVoltage_pr = (int) t1;
                 //parent.Log("%19% mCVoltage_pr : " + mCVoltage_pr);
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyBatteryTemperature), this, new CommonCallbacks.KeyListener<Double>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyBatteryTemperature), this, new CommonCallbacks.KeyListener<Double>() {
             @Override
             public void onValueChange(@Nullable Double aDouble, @Nullable Double t1) {
                 mCBatteryTemp_C = t1;
@@ -1835,7 +1943,7 @@ public class DroneModel {
 
             }
         });
-        KeyManager.getInstance().listen(KeyTools.createKey(BatteryKey.KeyCurrent), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(BatteryKey.KeyCurrent), this, new CommonCallbacks.KeyListener<Integer>() {
             @Override
             public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                 mCCurrent_mA = t1;
@@ -1847,7 +1955,7 @@ public class DroneModel {
     }
 
     public void listenControllerBattery() {
-        KeyManager.getInstance().listen(KeyTools.createKey(RemoteControllerKey.KeyBatteryInfo), this, new CommonCallbacks.KeyListener<BatteryInfo>() {
+        keyManager.listen(KeyTools.createKey(RemoteControllerKey.KeyBatteryInfo), this, new CommonCallbacks.KeyListener<BatteryInfo>() {
             @Override
             public void onValueChange(@Nullable BatteryInfo batteryInfo, @Nullable BatteryInfo t1) {
                 mControllerVoltage_pr = (int) t1.getBatteryPercent();
@@ -1858,7 +1966,7 @@ public class DroneModel {
 
 
     public void listenVelocity() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyAircraftVelocity), this, new CommonCallbacks.KeyListener<Velocity3D>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyAircraftVelocity), this, new CommonCallbacks.KeyListener<Velocity3D>() {
                     @Override
                     public void onValueChange(@Nullable Velocity3D velocity3D, @Nullable Velocity3D t1) {
                         if (t1 != null) {
@@ -1875,7 +1983,7 @@ public class DroneModel {
 
 
     public void listenIsFly() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyIsFlying), this, new CommonCallbacks.KeyListener<Boolean>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyIsFlying), this, new CommonCallbacks.KeyListener<Boolean>() {
                     @Override
                     public void onValueChange(@Nullable Boolean aBoolean, @Nullable Boolean t1) {
                         if (t1 != null) {
@@ -1890,7 +1998,7 @@ public class DroneModel {
     }
 
     public void listenFlightMode() {
-        KeyManager.getInstance().listen(KeyTools.createKey(FlightControllerKey.KeyFlightMode), this, new CommonCallbacks.KeyListener<FlightMode>() {
+        keyManager.listen(KeyTools.createKey(FlightControllerKey.KeyFlightMode), this, new CommonCallbacks.KeyListener<FlightMode>() {
             @Override
             public void onValueChange(@Nullable FlightMode flightMode, @Nullable FlightMode t1) {
                 lastMode = t1;
@@ -1902,7 +2010,7 @@ public class DroneModel {
     }
 
     public void listenAirlinkQuality() {
-        KeyManager.getInstance().listen(KeyTools.createKey(AirLinkKey.KeyUpLinkQuality), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(AirLinkKey.KeyUpLinkQuality), this, new CommonCallbacks.KeyListener<Integer>() {
                     @Override
                     public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                         mUplinkQuality = t1;
@@ -1911,7 +2019,7 @@ public class DroneModel {
                 }
 
         );
-        KeyManager.getInstance().listen(KeyTools.createKey(AirLinkKey.KeyDownLinkQuality), this, new CommonCallbacks.KeyListener<Integer>() {
+        keyManager.listen(KeyTools.createKey(AirLinkKey.KeyDownLinkQuality), this, new CommonCallbacks.KeyListener<Integer>() {
                     @Override
                     public void onValueChange(@Nullable Integer integer, @Nullable Integer t1) {
                         mDownlinkQuality = t1;
@@ -1925,7 +2033,7 @@ public class DroneModel {
 
 
     public void getFlightMode() {
-        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyFlightMode), new CommonCallbacks.CompletionCallbackWithParam<FlightMode>() {
+        keyManager.getValue(KeyTools.createKey(FlightControllerKey.KeyFlightMode), new CommonCallbacks.CompletionCallbackWithParam<FlightMode>() {
             @Override
             public void onSuccess(FlightMode flightMode) {
                 lastMode = flightMode;
@@ -1944,7 +2052,7 @@ public class DroneModel {
     public void getfullchargecapacity() {
 
 
-        KeyManager.getInstance().getValue(KeyTools.createKey(BatteryKey.KeyFullChargeCapacity), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
+        keyManager.getValue(KeyTools.createKey(BatteryKey.KeyFullChargeCapacity), new CommonCallbacks.CompletionCallbackWithParam<Integer>() {
             @Override
             public void onSuccess(Integer integer) {
                 mCFullChargeCapacity_mAh = (int) integer;
@@ -1963,7 +2071,7 @@ public class DroneModel {
 
     public void getIsMotorOn() {
 
-        KeyManager.getInstance().getValue(KeyTools.createKey(FlightControllerKey.KeyAreMotorsOn), new CommonCallbacks.CompletionCallbackWithParam<Boolean>() {
+        keyManager.getValue(KeyTools.createKey(FlightControllerKey.KeyAreMotorsOn), new CommonCallbacks.CompletionCallbackWithParam<Boolean>() {
                     @Override
                     public void onSuccess(Boolean aBoolean) {
                         isMotorOn = aBoolean;
@@ -2104,6 +2212,7 @@ public class DroneModel {
             ContextUtil.getContext(),
             WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME
     );
+    private KeyManager keyManager = KeyManager.getInstance();
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();

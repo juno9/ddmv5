@@ -52,7 +52,8 @@ dependencies {
     implementation deps.mikepenzIonicons
     implementation deps.material
     implementation deps.navermap
-
+    implementation deps.mattv3
+    
     api deps.maplibreAnotation
     api deps.maplibreTurf
     api deps.maplibreSdk

@@ -186,14 +186,14 @@ public class MAVLinkReceiver {
 //                }
 
                 switch (msg_cmd.command) {
-//                    case MAV_CMD_COMPONENT_ARM_DISARM:
+                    case MAV_CMD_COMPONENT_ARM_DISARM:
 //                        if (msg_cmd.param1 == 1)
 //                            mModel.armMotors();
 //                        else
 //                            mModel.disarmMotors();
 //                        // TEST
 ////                        mModel.echoLoadedMission();
-//                        break;
+                        break;
 //                    case MAV_CMD_DO_SET_MODE:
 //                        changeFlightMode((int) msg_cmd.param2);
 //                        break;

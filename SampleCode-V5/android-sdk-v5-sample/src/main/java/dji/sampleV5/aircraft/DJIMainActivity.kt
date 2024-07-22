@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.method.ScrollingMovementMethod
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -91,8 +92,7 @@ abstract class DJIMainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_new_one)
 
-        // 有一些手机从系统桌面进入的时候可能会重启main类型的activity
-        // 需要校验这种情况，业界标准做法，基本所有app都需要这个
+
         if (!isTaskRoot && intent.hasCategory(Intent.CATEGORY_LAUNCHER) && Intent.ACTION_MAIN == intent.action) {
 
             finish()
@@ -102,7 +102,7 @@ abstract class DJIMainActivity : AppCompatActivity() {
 
 
         val releaseNotes = readReleaseNotesFromFile()
-        ToastUtils.showToast(releaseNotes)
+
         ttv_ddm_info.setText(releaseNotes)
         btn_sdk_info.setOnClickListener {
             if (ttv_sdk_info.visibility == View.GONE) {
@@ -113,7 +113,6 @@ abstract class DJIMainActivity : AppCompatActivity() {
         btn_ddm_info.setOnClickListener {
             if (ttv_ddm_info.visibility == View.GONE) {
                 ttv_ddm_info.visibility = View.VISIBLE
-                LogUtils.i(releaseNotes)
                 ttv_sdk_info.visibility = View.GONE
             }
         }
