@@ -183,7 +183,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected ConstraintLayout fpvParentView;
     private DrawerLayout mDrawerLayout;
     private TextView gimbalAdjustDone;
-
+    private ImageView drowIcon;
     private GimbalFineTuneWidget gimbalFineTuneWidget;
     private ActiveTrackMode mode = QUICK_SHOT;
     private CompositeDisposable compositeDisposable;
@@ -261,6 +261,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
         iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
         streamDialog = new StreamDialog(this);
+        drowIcon = findViewById(R.id.imageView);
         cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
 
 
@@ -354,22 +355,31 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
 
+
         //mqtt메시지 보내는 코드 정상동작 확인 240711자
         Thread mqttTestThread = new Thread(() -> {
             try {
-                DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
+                //DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
 
                 while (true) {
 
                     mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
                     mModel.takePhoto();
-                    Thread.sleep(5000);
+                    Thread.sleep(1000 * 15); //15 초마다
+
                 }
             } catch (Exception e) {
                 Log.i(TAG, "exception : " + e.toString());
             }
         });
         mqttTestThread.start();
+        drowIcon.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mModel.downloadPhotofromdrone();
+            }
+        });
+
         String streamAddress = prefs.getString("pref_stream_address", "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream");
         prefs.edit().putString("pref_stream_address", streamAddress).apply();
         prefs.edit().apply();
@@ -383,6 +393,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         ddmImageHandler = new DDMImageHandler(this, mModel, primaryFpvWidget.getWidth(), primaryFpvWidget.getHeight());
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
+
+
+        mModel.initmediamanager();
+
 
     }
 
@@ -823,6 +837,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         @Override
         public void run() {
             if (mainActivityWeakReference.get().mModel == null && mainActivityWeakReference.get().mModel.isTcpWorker) {
+
             } else {
                 mainActivityWeakReference.get().mModel.tick();
             }
@@ -870,8 +885,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
 //                CameraImageSenderTimerTask cameraImageSenderTimerTask = new CameraImageSenderTimerTask(mainActivityWeakReference);
 //                timer = new Timer(true);
-//                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 2000); // 2000
-
+//                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 5000); // 2000
 
 
                 while (!isCancelled()) {
@@ -1039,7 +1053,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             String gcsIPString = "223.130.163.167";
 
             if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false)) {
-                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "223.130.163.167");
             }
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
 
@@ -1068,6 +1082,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 mainActivityWeakReference.get().bufferIn = new BufferedInputStream(mainActivityWeakReference.get().in);
 
                 Log.d(TAG, "mTcpSocket :: Success. Received-IP:" + mainActivityWeakReference.get().isa.getAddress() + " / Received-localport:" + mainActivityWeakReference.get().isa.getPort());
+
+
                 mainActivityWeakReference.get().mModel.isTcpWorker = true;
                 // exist Udp Out
 //                mainActivityWeakReference.get().socket = new DatagramSocket();
@@ -1122,7 +1138,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
                 gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
-
 
 
             try {

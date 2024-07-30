@@ -1,37 +1,31 @@
 package dji.v5.ux.sample.util;
 
-import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_FOCUS;
-import static com.dji.wpmzsdk.common.utils.kml.model.WaypointActionType.CAMERA_ZOOM;
-import static java.lang.Thread.sleep;
-import static dji.sdk.keyvalue.value.camera.CameraMode.PHOTO_HIGH_RESOLUTION;
+
 import static dji.sdk.keyvalue.value.camera.CameraMode.PHOTO_NORMAL;
-import static dji.sdk.keyvalue.value.camera.CameraStorageLocation.INTERNAL;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ACTIVE_TRACK;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_HOVER;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.ATTI_LIMITED;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.FARMING;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI;
-import static dji.sdk.keyvalue.value.flightcontroller.FCFlightMode.GPS_ATTI_WRISTBAND;
+import static dji.sdk.keyvalue.value.camera.CameraStorageLocation.SDCARD;
 import static dji.v5.ux.MAVLink.common.msg_mission_ack.MAVLINK_MSG_ID_MISSION_ACK;
-import static dji.v5.ux.MAVLink.common.msg_set_position_target_global_int.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT;
-import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM;
-import static dji.v5.ux.MAVLink.enums.MAV_CMD.MAV_CMD_NAV_TAKEOFF;
+
 import static dji.v5.ux.MAVLink.enums.MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1;
 import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.media.RemoteController;
+
+import android.os.Environment;
 import android.util.Log;
-import android.widget.Toast;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.dji.industry.mission.natives.util.NativeCallbackUtils;
-import com.dji.industry.mission.waypointv2.gimbal.Rotation;
-import com.google.android.gms.common.internal.service.Common;
 
+import com.dji.industry.mission.waypointv2.gimbal.Rotation;
+
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
@@ -40,28 +34,28 @@ import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
+
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
+
+import java.util.ListIterator;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-import dji.sdk.keyvalue.converter.SingleValueConverter;
 import dji.sdk.keyvalue.key.AirLinkKey;
 import dji.sdk.keyvalue.key.BatteryKey;
 import dji.sdk.keyvalue.key.CameraKey;
-import dji.sdk.keyvalue.key.DJIActionKeyInfo;
-import dji.sdk.keyvalue.key.DJIKey;
-import dji.sdk.keyvalue.key.DJIKeyInfo;
+
 import dji.sdk.keyvalue.key.FlightControllerKey;
 import dji.sdk.keyvalue.key.GimbalKey;
 import dji.sdk.keyvalue.key.KeyTools;
 import dji.sdk.keyvalue.key.RemoteControllerKey;
-import dji.sdk.keyvalue.value.camera.CameraStorageInfos;
+
 import dji.sdk.keyvalue.value.camera.CameraStorageLocation;
-import dji.sdk.keyvalue.value.camera.CameraStorageStateMsg;
-import dji.sdk.keyvalue.value.camera.GeneratedMediaFileInfo;
+
+import dji.sdk.keyvalue.value.camera.MediaFileType;
 import dji.sdk.keyvalue.value.common.Attitude;
 import dji.sdk.keyvalue.value.common.ComponentIndexType;
 import dji.sdk.keyvalue.value.common.EmptyMsg;
@@ -70,20 +64,16 @@ import dji.sdk.keyvalue.value.common.LocationCoordinate3D;
 import dji.sdk.keyvalue.value.common.Velocity3D;
 import dji.sdk.keyvalue.value.flightcontroller.FlightMode;
 import dji.sdk.keyvalue.value.flightcontroller.GPSSignalLevel;
-import dji.sdk.keyvalue.value.flightcontroller.RollPitchControlMode;
-import dji.sdk.keyvalue.value.flightcontroller.VerticalControlMode;
-import dji.sdk.keyvalue.value.flightcontroller.VirtualStickFlightControlParam;
-import dji.sdk.keyvalue.value.flightcontroller.YawControlMode;
+
 import dji.sdk.keyvalue.value.gimbal.GimbalAngleRotation;
-import dji.sdk.keyvalue.value.gimbal.GimbalAngleRotationMode;
-import dji.sdk.keyvalue.value.gimbal.GimbalMode;
+
+
 import dji.sdk.keyvalue.value.mission.Waypoint;
-import dji.sdk.keyvalue.value.mission.Wayline;
-import dji.sdk.keyvalue.value.mission.WaypointAction;
+
 import dji.sdk.keyvalue.value.mission.WaypointMission;
-import dji.sdk.keyvalue.value.mission.WaypointMissionState;
+
 import dji.sdk.keyvalue.value.remotecontroller.BatteryInfo;
-import dji.sdk.keyvalue.value.remotecontroller.ControlMode;
+
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.common.error.IDJIError;
 import dji.v5.manager.KeyManager;
@@ -93,9 +83,15 @@ import dji.v5.manager.aircraft.waypoint3.WaypointMissionExecuteStateListener;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
 import dji.v5.manager.aircraft.waypoint3.model.WaylineExecutingInfo;
 import dji.v5.manager.aircraft.waypoint3.model.WaypointMissionExecuteState;
-import dji.v5.manager.datacenter.camera.CameraStreamManager;
-import dji.v5.manager.datacenter.camera.StreamInfo;
+import dji.v5.manager.datacenter.MediaDataCenter;
+
+import dji.v5.manager.datacenter.media.MediaFile;
+import dji.v5.manager.datacenter.media.MediaFileDownloadListener;
 import dji.v5.manager.datacenter.media.MediaFileListDataSource;
+import dji.v5.manager.datacenter.media.MediaFileListState;
+import dji.v5.manager.datacenter.media.MediaFileListStateListener;
+import dji.v5.manager.datacenter.media.MediaManager;
+import dji.v5.manager.datacenter.media.PullMediaFileListParam;
 import dji.v5.manager.interfaces.ICameraStreamManager;
 import dji.v5.manager.interfaces.IKeyManager;
 import dji.v5.manager.interfaces.IMediaManager;
@@ -127,24 +123,16 @@ import dji.v5.ux.MAVLink.common.msg_vfr_hud;
 import dji.v5.ux.MAVLink.common.msg_vibration;
 import dji.v5.ux.MAVLink.enums.GPS_FIX_TYPE;
 import dji.v5.ux.MAVLink.enums.MAV_AUTOPILOT;
-import dji.v5.ux.MAVLink.enums.MAV_CMD;
-import dji.v5.ux.MAVLink.enums.MAV_FRAME;
-import dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT;
+
 import dji.v5.ux.MAVLink.enums.MAV_MISSION_TYPE;
 import dji.v5.ux.MAVLink.enums.MAV_MODE_FLAG;
 import dji.v5.ux.MAVLink.enums.MAV_PROTOCOL_CAPABILITY;
-import dji.v5.ux.MAVLink.enums.MAV_RESULT;
+
 import dji.v5.ux.MAVLink.enums.MAV_STATE;
 import dji.v5.ux.MAVLink.enums.MAV_TYPE;
-import dji.v5.ux.R;
-import dji.v5.ux.core.base.DJISDKModel;
-import dji.v5.ux.core.communication.CameraKeys;
-import dji.v5.ux.core.communication.ObservableInMemoryKeyedStore;
-import dji.v5.ux.core.util.DataProcessor;
-import dji.v5.ux.core.widget.battery.BatteryInfoWidgetModel;
-import dji.v5.ux.obstacle.AvoidanceShortcutWidget;
+
 import dji.v5.ux.sample.showcase.defaultlayout.DefaultLayoutActivity;
-import io.reactivex.rxjava3.core.Flowable;
+
 
 public class DroneModel {
     private static final int NOT_USING_GCS_COMMANDED_MODE = -1;
@@ -167,6 +155,35 @@ public class DroneModel {
         listenFlightMode();
         listenAirlinkQuality();
         getfullchargecapacity();
+
+    }
+
+
+    public void initmediamanager() {
+        mediaManager = MediaDataCenter.getInstance().getMediaManager();
+        parent.Log("mediaManager MediaFileListStateListener initiated");
+        mediaManager.addMediaFileListStateListener(new MediaFileListStateListener() {
+            @Override
+            public void onUpdate(MediaFileListState mediaFileListState) {
+                parent.Log("mediaManager MediaFileListStateListener updated");
+            }
+        });
+
+        mediaManager.enable(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("mediaManager enabled");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("mediaManager Not enabled");
+            }
+        });
+        MediaFileListDataSource source = new MediaFileListDataSource(new MediaFileListDataSource.Builder());
+        source.setStorageLocation(SDCARD);
+        mediaManager.setMediaFileDataSource(source);
+
     }
 
 
@@ -1224,6 +1241,18 @@ public class DroneModel {
         sendMessage(msg);
     }
 
+    public void setStorageLocation() {
+        MediaFileListDataSource.Builder builder = new MediaFileListDataSource.Builder();
+        MediaFileListDataSource source = new MediaFileListDataSource(builder);
+
+
+        parent.Log("미디어파일소스 수정 전 저장 위치 : " + source.getStorageLocation().toString());
+
+
+        source.setStorageLocation(CameraStorageLocation.SDCARD);
+        parent.Log("미디어파일소스 수정 후 저장 위치 : " + source.getStorageLocation().toString());
+    }
+
     public void uploadKMZfile(DroneModel model, String path) {
         this.kmzOutPath = path;
 
@@ -1711,7 +1740,145 @@ public class DroneModel {
 
     }
 
+    public void getmediafileList() {
+        mediaManager.pullMediaFileListFromCamera(new PullMediaFileListParam(new PullMediaFileListParam.Builder()), new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("pullMediaFileListFromCamera done");
+
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("pullMediaFileListFromCamera fail");
+            }
+        });
+
+
+    }
+
+    public void downloadPhotofromdrone() {
+        parent.Log("이미지 다운로드 메소드 진입");
+
+        try {
+            String imgDirName = "IMG_MAPPING_" + android.text.format.DateFormat.format("yyyy-MM-dd-hh-mm-ss", new java.util.Date());
+            useDirectory = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "DDM-Img");
+            if (!useDirectory.exists()) {
+                useDirectory.mkdir();
+            }
+
+            recordDirectory = new File(useDirectory, imgDirName);
+            if (!recordDirectory.exists()) {
+                recordDirectory.mkdir();
+            }
+
+            Log.i(TAG, "디렉토리명 지정");
+        } catch (Exception e) {
+            Log.e(TAG, "ERROR ZIPPING LOGS", e);
+        }
+
+        for (int i = 0; i < mediaManager.getMediaFileListData().getData().size(); i++) {//현재 가지고 있는 미디어파일들
+            Log.i(TAG, i + "번째 아이템 for문 시작");
+
+
+            if (mediaManager.getMediaFileListData().getData().get(i).getFileType() == MediaFileType.JPEG && mediaManager.getMediaFileListData().getData().get(i).getFileName().endsWith("W.JPG")) {
+                Log.i(TAG, i + "번째 아이템 파일형식 JPEG, w로 끝남");
+                FileOutputStream outputStream;
+                BufferedOutputStream bos;
+                final int index = i;
+                String fileName = mediaManager.getMediaFileListData().getData().get(i).getFileName();
+
+                String path = recordDirectory.getPath() + File.separator + fileName;
+                File destPath = new File(path);
+
+                try {
+                    outputStream = new FileOutputStream(destPath);
+                    bos = new BufferedOutputStream(outputStream);
+                    parent.Log("아웃풋 스트림 생성");
+                    mediaManager.getMediaFileListData().getData().get(i).pullOriginalMediaFileFromCamera(0, new MediaFileDownloadListener() {
+                        @Override
+                        public void onStart() {
+                            Log.i(TAG, index + "번째 아이템 pull시작");
+                        }
+
+                        @Override
+                        public void onProgress(long total, long current) {
+                            double percentage = ((double) current / total) * 100;
+                            Log.i(TAG, String.format(index + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
+                        }
+
+                        @Override
+                        public void onRealtimeDataUpdate(byte[] data, long position) {
+                            Log.i(TAG, index + "번째 아이템 실시간 업데이트");
+                            try {
+                                bos.write(data, 0, data.length);
+
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            try {
+                                bos.flush();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            Log.i(TAG, index + "번째 아이템 pull 종료");
+
+
+                        }
+
+                        @Override
+                        public void onFailure(IDJIError error) {
+                            Log.i(TAG, index + "번째 아이템 pull 실패");
+                        }
+                    });
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+        }
+
+    }
+
+
+    public void deletemediafilefromCamera() {
+        mediaManager.pullMediaFileListFromCamera(new PullMediaFileListParam(new PullMediaFileListParam.Builder()), new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("pullMediaFileListFromCamera done");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("pullMediaFileListFromCamera fail");
+            }
+        });
+        mediaManager.deleteMediaFiles(mediaManager.getMediaFileListData().getData(), new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("deleteMediaFiles done");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("deleteMediaFiles fail");
+            }
+        });
+
+    }
+
+
     public void takePhoto() {
+        // 카메라 모드변경
+
 
         keyManager.setValue(KeyTools.createKey(CameraKey.KeyCameraMode), PHOTO_NORMAL, new CommonCallbacks.CompletionCallback() {
             @Override
@@ -1726,6 +1893,8 @@ public class DroneModel {
             }
         });
 
+
+        //사진 촬영
         keyManager.performAction(KeyTools.createKey(CameraKey.KeyStartShootPhoto), new CommonCallbacks.CompletionCallbackWithParam<EmptyMsg>() {
             @Override
             public void onSuccess(EmptyMsg emptyMsg) {
@@ -1749,6 +1918,7 @@ public class DroneModel {
             }
         });
 
+       getmediafileList();
     }
 
     public void setGimbalRotation(double degree) {//입력한 각도에 따라 짐벌 세팅
@@ -1798,7 +1968,7 @@ public class DroneModel {
             @Override
             public void onSuccess(Integer integer) {
                 mThrottleSetting = (int) integer;
-                //parent.Log("listenRemoteControllerSticks() %4% mThrottleSetting " + integer);
+                //parent.Log("listenRemot eControllerSticks() %4% mThrottleSetting " + integer);
             }
 
             @Override
@@ -2087,7 +2257,35 @@ public class DroneModel {
         );
     }
 
+    public String createMappingImageDirectory() {
+        // TODO Mapping Flight Flag, Start
+        try {
+            String imgDirName = "IMG_MAPPING_" + android.text.format.DateFormat.format("yyyy-MM-dd-hh-mm-ss", new java.util.Date());
 
+
+            useDirectory = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "DDM-Img");
+
+            if (!useDirectory.exists()) {
+                useDirectory.mkdir();
+            }
+            recordDirectory = new File(useDirectory, imgDirName);
+            if (!recordDirectory.exists()) {
+                recordDirectory.mkdir();
+            }
+//            ArrayList<File> files = new ArrayList<>(fileNames.length);
+//            for (String fileName : fileNames) {
+//                files.add(new File(directory, fileName));
+//            }
+            return imgDirName;
+        } catch (Exception e) {
+            Log.e(TAG, "ERROR ZIPPING LOGS", e);
+        }
+        return null;
+
+    }
+
+    ArrayList<MediaFile> fileList = new ArrayList<>();
+    MediaFileListState mMediaFileListState;
     //region Fields
 
     public void test() {
@@ -2213,6 +2411,12 @@ public class DroneModel {
             WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME
     );
     private KeyManager keyManager = KeyManager.getInstance();
+    public File useDirectory = null;
+    public File recordDirectory = null;
+    private BufferedOutputStream bos;
+    private FileOutputStream outputStream;
+    public String root = "";
+    IMediaManager mediaManager;
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();

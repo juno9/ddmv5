@@ -751,7 +751,7 @@ public class MAVLinkReceiver {
 //        return new Waypoint(new_lat, new_lon, new_alt);
 //    }
 //
-//    // Based on: https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi
+
 //    private double getRangeBetweenWaypoints_m(Waypoint wp1, Waypoint wp2) {
 //
 //        double lat1 = wp1.coordinate.getLatitude();

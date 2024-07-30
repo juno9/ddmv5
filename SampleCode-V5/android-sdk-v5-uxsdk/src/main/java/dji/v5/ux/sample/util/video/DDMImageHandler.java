@@ -93,7 +93,7 @@ public class DDMImageHandler implements ICameraStreamManager.CameraFrameListener
                     break;
                 case 35:
                     Log.e(TAG, "Camera Tick: 케이스 2 ");
-                    //YUV420P
+
                     newSaveYuvDataToJPEG420P(frameInfo.getRawFrame(), frameInfo.getWidth(), frameInfo.getHeight());
                     break;
                 default:
@@ -282,7 +282,7 @@ public class DDMImageHandler implements ICameraStreamManager.CameraFrameListener
         try {
             String imgDirName = "IMG_MAPPING_" + android.text.format.DateFormat.format("yyyy-MM-dd-hh-mm-ss", new java.util.Date());
 
-            String[] fileNames = {"DJI_LOG", "OUTBOUND_LOG", "INBOUND_LOG"};
+
 
             useDirectory = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "DDM-Img");
 
@@ -526,7 +526,7 @@ public class DDMImageHandler implements ICameraStreamManager.CameraFrameListener
     @Override
     public void onFrame(@NonNull byte[] frameData, int offset, int length, int width, int height, @NonNull ICameraStreamManager.FrameFormat format) {
         DDMFrameInfo frameInfo = new DDMFrameInfo();
-        frameInfo.setColorFormat(ICameraStreamManager.FrameFormat.YUV444_888.value);
+        frameInfo.setColorFormat(ICameraStreamManager.FrameFormat.YUV420_888.value);
         frameInfo.setRawFrame(frameData);
         frameInfo.setWidth(width);
         frameInfo.setHeight(height);
