@@ -151,7 +151,7 @@ public class WpMissionManager {
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
 
-                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0 || msg.z != 0)) {
+                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0 || msg.z != 0)) {//웨이포인트 아이템인데 메시지의 파라미터1번이 0보다 크다 + x,y,z모두 0보다 크다 - 웨이포인트 아이템이다.
                         Log.d(TAG, "Delay: " + msg.param1);
                         WaylineActionInfo hoverAction = createHoverAction(msg.param1);
                         actionInfos.add(hoverAction);

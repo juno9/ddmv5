@@ -395,7 +395,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
 
 
-        mModel.initmediamanager();
+//        mModel.initmediamanager();
 
 
     }

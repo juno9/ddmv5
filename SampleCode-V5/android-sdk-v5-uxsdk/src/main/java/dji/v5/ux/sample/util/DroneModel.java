@@ -7,23 +7,30 @@ import static dji.v5.ux.MAVLink.common.msg_mission_ack.MAVLINK_MSG_ID_MISSION_AC
 
 import static dji.v5.ux.MAVLink.enums.MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1;
 import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
+import static dji.v5.ux.sample.util.video.DDMImageHandler.bytesToHex;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
 
+
+import android.media.ExifInterface;
+import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 
 import com.dji.industry.mission.waypointv2.gimbal.Rotation;
 
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,13 +40,16 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -1778,14 +1788,15 @@ public class DroneModel {
         }
 
         for (int i = 0; i < mediaManager.getMediaFileListData().getData().size(); i++) {//현재 가지고 있는 미디어파일들
-            Log.i(TAG, i + "번째 아이템 for문 시작");
+            Log.i(TAG, i + "번째 아이템 for문 시작 파일 형식 : "+mediaManager.getMediaFileListData().getData().get(i).getFileType().toString());
 
+            final int index = i;
 
-            if (mediaManager.getMediaFileListData().getData().get(i).getFileType() == MediaFileType.JPEG && mediaManager.getMediaFileListData().getData().get(i).getFileName().endsWith("W.JPG")) {
-                Log.i(TAG, i + "번째 아이템 파일형식 JPEG, w로 끝남");
+            if (mediaManager.getMediaFileListData().getData().get(i).getFileType() == MediaFileType.JPEG && (mediaManager.getMediaFileListData().getData().get(i).getFileName().endsWith("V.JPG")||mediaManager.getMediaFileListData().getData().get(i).getFileName().endsWith("W.JPG"))) {
+                Log.i(TAG, i + "번째 아이템 파일형식 JPEG, W 또는 V로 끝남");
                 FileOutputStream outputStream;
                 BufferedOutputStream bos;
-                final int index = i;
+
                 String fileName = mediaManager.getMediaFileListData().getData().get(i).getFileName();
 
                 String path = recordDirectory.getPath() + File.separator + fileName;
@@ -1818,6 +1829,7 @@ public class DroneModel {
                             }
                         }
 
+                        @RequiresApi(api = Build.VERSION_CODES.O)
                         @Override
                         public void onFinish() {
                             try {
@@ -1826,6 +1838,7 @@ public class DroneModel {
                                 throw new RuntimeException(e);
                             }
 
+                            processingImageInfo(String.valueOf(destPath), 1920, 1080);
                             Log.i(TAG, index + "번째 아이템 pull 종료");
 
 
@@ -1849,11 +1862,14 @@ public class DroneModel {
     }
 
 
-    public void deletemediafilefromCamera() {
+    public void deletemediafilefromCamera(int index) {
+        List<MediaFile> list = new ArrayList<>();
         mediaManager.pullMediaFileListFromCamera(new PullMediaFileListParam(new PullMediaFileListParam.Builder()), new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
                 parent.Log("pullMediaFileListFromCamera done");
+                MediaFile file = mediaManager.getMediaFileListData().getData().get(index);
+                list.add(file);
             }
 
             @Override
@@ -1861,10 +1877,10 @@ public class DroneModel {
                 parent.Log("pullMediaFileListFromCamera fail");
             }
         });
-        mediaManager.deleteMediaFiles(mediaManager.getMediaFileListData().getData(), new CommonCallbacks.CompletionCallback() {
+        mediaManager.deleteMediaFiles(list, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                parent.Log("deleteMediaFiles done");
+                parent.Log("deleteMediaFiles success");
             }
 
             @Override
@@ -1878,7 +1894,7 @@ public class DroneModel {
 
     public void takePhoto() {
         // 카메라 모드변경
-
+        initmediamanager();
 
         keyManager.setValue(KeyTools.createKey(CameraKey.KeyCameraMode), PHOTO_NORMAL, new CommonCallbacks.CompletionCallback() {
             @Override
@@ -1918,7 +1934,7 @@ public class DroneModel {
             }
         });
 
-       getmediafileList();
+        getmediafileList();
     }
 
     public void setGimbalRotation(double degree) {//입력한 각도에 따라 짐벌 세팅
@@ -2284,7 +2300,159 @@ public class DroneModel {
 
     }
 
-    ArrayList<MediaFile> fileList = new ArrayList<>();
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void processingImageInfo(String recordedImagePath, int imageWidth, int imageHeight) {
+
+        LocalDateTime time = LocalDateTime.now(); //LocalDateTime.now();
+
+        LocationCoordinate3D coord3d = new LocationCoordinate3D();
+        coord3d.setLatitude(this.get_current_lat());
+        coord3d.setLongitude(this.get_current_lon());
+        coord3d.setAltitude(this.get_current_alt());
+
+        double lat = coord3d.getLatitude();
+        double lng = coord3d.getLongitude();
+        double alt = coord3d.getAltitude();
+        if (Double.isNaN(lat)) {
+            lat = DroneModel.DEFUALT_LATITUDE;
+        }
+        if (Double.isNaN(lng)) {
+            lng = DroneModel.DEFUALT_LONGITUDE;
+        }
+        if (Double.isNaN(alt)) {
+            alt = 10;
+        }
+        float roll = (float) this.getmRoll();
+        float pitch = (float) this.getmPitch();
+        float yaw = (float) this.getmYaw();
+
+//        alt = 503.393758;
+        // TODO exif GPS and Camera Infomation for georeferenced processing at server
+        // 차후 기타 정보들을 이미지에 싣자..
+        byte[] exifImageByteArray = this.setGeoTag(recordedImagePath
+                , lat
+                , lng
+                , alt
+        );
+        String imageHex = bytesToHex(exifImageByteArray);
+        Map<String, Object> imageMap = new HashMap<String, Object>();
+        imageMap.put("dataTime", time);
+        imageMap.put("imageWidth", imageWidth);
+        imageMap.put("imageHeight", imageHeight);
+        imageMap.put("imageSeq", imageIndex++);
+        imageMap.put("image", imageHex);
+        imageMap.put("lat", (int) (lat * 10000000));
+        imageMap.put("lon", (int) (lng * 10000000));
+        imageMap.put("alt", (int) (alt * 1000));
+        imageMap.put("roll", roll);   // need degree
+        imageMap.put("pitch", pitch); // need degree
+        imageMap.put("yaw", yaw);     // need degree
+        imageMap.put("droneId", this.getSystemId());
+        imageMap.put("flightId", FLIGHT_ID);
+        imageMap.put("storeName", STORE_NAME);
+        imageMap.put("layerName", LAYER_NAME);
+
+        this.publishImageInfo(this.getSystemId(), imageMap);
+
+    }
+
+    public void publishImageInfo(int droneId, Map<String, Object> imageInfo) {
+        Log.e(TAG, "publishImageInfo start :" + imageInfo.toString());
+        try {
+            DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(parent.getApplicationContext()
+                    , "192.168.110.93"
+                    , "1883"
+                    , "clrobur/mapping/ddm/" // sub
+
+            );
+            client.senderJsonMap("clrobur/mapping/drone" + String.valueOf(droneId)
+                    , imageInfo
+            );
+            Log.e(TAG, "TOPIC :" + "clrobur/mapping/drone" + String.valueOf(droneId));
+        } catch (Exception e) {
+            Log.e(TAG, "publishImageInfo error :" + imageInfo.toString());
+            e.printStackTrace();
+        }
+    }
+
+    public byte[] setGeoTag(String imagePath, double _latitude, double _longitude, double _altitude) {
+//        if (geoTag != null) {
+        Log.e(TAG, "setGeoTag : " + imagePath);
+        Log.e(TAG, "_latitude : " + _latitude);
+        Log.e(TAG, "_longitude : " + _longitude);
+        Log.e(TAG, "_altitude : " + _altitude);
+        try {
+            File image = new File(imagePath);
+            ExifInterface exif = new ExifInterface(
+                    image.getAbsolutePath());
+
+            double latitude = Math.abs(_latitude);
+            double longitude = Math.abs(_longitude);
+
+            int num1Lat = (int) Math.floor(latitude);
+            int num2Lat = (int) Math.floor((latitude - num1Lat) * 60);
+            double num3Lat = (latitude - ((double) num1Lat + ((double) num2Lat / 60))) * 3600000;
+
+            int num1Lon = (int) Math.floor(longitude);
+            int num2Lon = (int) Math.floor((longitude - num1Lon) * 60);
+            double num3Lon = (longitude - ((double) num1Lon + ((double) num2Lon / 60))) * 3600000;
+
+            int num1Alt = (int) Math.floor(_altitude);
+            int num2Alt = (int) Math.floor((_altitude - num1Alt) * 60);
+            double num3Alt = (_altitude - ((double) num1Alt + ((double) num2Alt / 60))) * 3600000;
+
+            String lat = num1Lat + "/1," + num2Lat + "/1," + num3Lat + "/1000";
+            String lon = num1Lon + "/1," + num2Lon + "/1," + num3Lon + "/1000";
+//            String alt = num1Alt + "/1," + num2Alt + "/1," + num3Alt + "/1000";
+
+            if (_latitude > 0) {
+                exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N");
+            } else {
+                exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "S");
+            }
+
+            if (_longitude > 0) {
+                exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E");
+            } else {
+                exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "W");
+            }
+//            exif.setGpsInfo();
+//            TAG_ORIENTATION
+//            TAG_GPS_ALTITUDE_REF
+
+            exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, lat);
+            exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, lon);
+            exif.setAttribute(ExifInterface.TAG_GPS_ALTITUDE, String.valueOf(_altitude * 1000) + "/1000");
+            exif.setAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF, Integer.toString(1));
+            exif.saveAttributes();
+
+            FileInputStream fis = new FileInputStream(image);
+            //create FileInputStream which obtains input bytes from a file in a file system
+            //FileInputStream is meant for reading streams of raw bytes such as image data. For reading streams of characters, consider using FileReader.
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[1024];
+            try {
+                for (int readNum; (readNum = fis.read(buf)) != -1; ) {
+                    //Writes to this byte array output stream
+                    bos.write(buf, 0, readNum);
+//                    System.out.println("bytearray read " + readNum + " bytes,");
+                }
+            } catch (IOException ex) {
+                Log.e(TAG, "image to bytearray error ");
+                return null;
+            }
+            return bos.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+//        } else {
+//            return false;
+//        }
+    }
+
+    List<MediaFile> fileList = new ArrayList<>();
     MediaFileListState mMediaFileListState;
     //region Fields
 
@@ -2312,7 +2480,7 @@ public class DroneModel {
     private final int batteryIndex = 0;
     private final ArrayList<MAVParam> params = new ArrayList<>();
     private int mGCSCommandedMode;
-
+    private static int imageIndex = 0;
 
     private final int mlastState = 100;//임의로 지정한 배터리 전력량, 배터리 전력 정보를 받으면 동기화 하여 배터리 잔량 경보를 부모 액티비티에 보냄
 
@@ -2417,6 +2585,12 @@ public class DroneModel {
     private FileOutputStream outputStream;
     public String root = "";
     IMediaManager mediaManager;
+    boolean downloadcomplete;
+
+
+    public static String FLIGHT_ID = "FM20210627-1";
+    public static String STORE_NAME = "TECHNOPARKV5";
+    public static String LAYER_NAME = "PANTOM";
     //
 
 //    private TimeLineMissionControlView TimeLine = new TimeLineMissionControlView();
@@ -2434,3 +2608,5 @@ public class DroneModel {
 
 
 }
+
+

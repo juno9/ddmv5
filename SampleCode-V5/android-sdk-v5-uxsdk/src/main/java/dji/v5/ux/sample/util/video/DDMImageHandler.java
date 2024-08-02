@@ -241,7 +241,7 @@ public class DDMImageHandler implements ICameraStreamManager.CameraFrameListener
         if (!this.isStart) {
             this.isStart = true;
             root = this.createMappingImageDirectory();
-        }
+        }//디렉토리 먼저 생성
 //        ContextWrapper cw = new ContextWrapper(this.currentContext);
 //        File directory2= cw.getDir("DDM-Img", Context.MODE_PRIVATE);
         Log.e(TAG, "writeMappingImage : recordDirectory : " + recordDirectory.toURI().toString());
@@ -251,21 +251,23 @@ public class DDMImageHandler implements ICameraStreamManager.CameraFrameListener
                 imageWidth,
                 imageHeight,
                 null);
+
+        //yuv 프레임을 받아서 객체로 선언함
         FileOutputStream outputFile;
         final String path = /*"/storage/emulated/0/DDM-Img"*/ recordDirectory + "/ScreenShot_" + System.currentTimeMillis() + ".jpg";
         try {
-            outputFile = new FileOutputStream(new File(path));
+            outputFile = new FileOutputStream(new File(path));//지정된 경로에 파일아웃풋 스트림을 생성
         } catch (FileNotFoundException e) {
             Log.e(TAG, "test screenShot: new bitmap output file error: " + e);
             return;
         }
-        if (outputFile != null) {
+        if (outputFile != null) {//아웃풋 스트림이 만들어져 있으면
             yuvImage.compressToJpeg(new Rect(0,
                     0,
                     imageWidth,
                     imageHeight), 100, outputFile);
         }
-        try {
+        try {//스트림으로 데이터를 내보내고 닫음
             outputFile.flush();
             outputFile.close();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
