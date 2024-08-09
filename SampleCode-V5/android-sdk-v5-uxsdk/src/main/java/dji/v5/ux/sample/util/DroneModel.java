@@ -1826,141 +1826,23 @@ public class DroneModel {
     public void downloadPhotofromdrone() {
         parent.Log("이미지 다운로드 메소드 진입");
 
-        List<MediaFile> list = mediaManager.getMediaFileListData().getData();
-        List<MediaFile> listTodelete = new List<MediaFile>() {
-            @Override
-            public int size() {
-                return 0;
-            }
+        mediaManager.getMediaFileListData().getData().get(0);
+        ArrayList<MediaFile> listTodelete = new ArrayList<MediaFile>();
 
-            @Override
-            public boolean isEmpty() {
-                return false;
-            }
 
-            @Override
-            public boolean contains(@Nullable Object o) {
-                return false;
-            }
+        ;
 
-            @NonNull
-            @Override
-            public Iterator<MediaFile> iterator() {
-                return null;
-            }
 
-            @NonNull
-            @Override
-            public Object[] toArray() {
-                return new Object[0];
-            }
+            Log.i(TAG, 0 + "번째 아이템 for문 시작 파일 형식 : " + mediaManager.getMediaFileListData().getData().get(0).getFileType().toString());
 
-            @NonNull
-            @Override
-            public <T> T[] toArray(@NonNull T[] a) {
-                return null;
-            }
 
-            @Override
-            public boolean add(MediaFile mediaFile) {
-                return false;
-            }
 
-            @Override
-            public boolean remove(@Nullable Object o) {
-                return false;
-            }
-
-            @Override
-            public boolean containsAll(@NonNull Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public boolean addAll(@NonNull Collection<? extends MediaFile> c) {
-                return false;
-            }
-
-            @Override
-            public boolean addAll(int index, @NonNull Collection<? extends MediaFile> c) {
-                return false;
-            }
-
-            @Override
-            public boolean removeAll(@NonNull Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public boolean retainAll(@NonNull Collection<?> c) {
-                return false;
-            }
-
-            @Override
-            public void clear() {
-
-            }
-
-            @Override
-            public MediaFile get(int index) {
-                return null;
-            }
-
-            @Override
-            public MediaFile set(int index, MediaFile element) {
-                return null;
-            }
-
-            @Override
-            public void add(int index, MediaFile element) {
-
-            }
-
-            @Override
-            public MediaFile remove(int index) {
-                return null;
-            }
-
-            @Override
-            public int indexOf(@Nullable Object o) {
-                return 0;
-            }
-
-            @Override
-            public int lastIndexOf(@Nullable Object o) {
-                return 0;
-            }
-
-            @NonNull
-            @Override
-            public ListIterator<MediaFile> listIterator() {
-                return null;
-            }
-
-            @NonNull
-            @Override
-            public ListIterator<MediaFile> listIterator(int index) {
-                return null;
-            }
-
-            @NonNull
-            @Override
-            public List<MediaFile> subList(int fromIndex, int toIndex) {
-                return null;
-            }
-        };
-
-        for (int i = 0; i < list.size(); i++) {//현재 가지고 있는 미디어파일들
-            Log.i(TAG, i + "번째 아이템 for문 시작 파일 형식 : " + mediaManager.getMediaFileListData().getData().get(i).getFileType().toString());
-
-            final int index = i;
-
-            if (list.get(i).getFileType() == MediaFileType.JPEG && (list.get(i).getFileName().endsWith("V.JPG") || list.get(i).getFileName().endsWith("W.JPG"))) {
-                Log.i(TAG, i + "번째 아이템 파일형식 JPEG, W 또는 V로 끝남");
+            if (mediaManager.getMediaFileListData().getData().get(0).getFileType() == MediaFileType.JPEG && (mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("V.JPG") || mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("W.JPG"))) {
+                Log.i(TAG, 0 + "번째 아이템 파일형식 JPEG, W 또는 V로 끝남");
                 FileOutputStream outputStream;
                 BufferedOutputStream bos;
 
-                String fileName = mediaManager.getMediaFileListData().getData().get(i).getFileName();
+                String fileName = mediaManager.getMediaFileListData().getData().get(0).getFileName();
                 String path = recordDirectory.getPath() + File.separator + fileName;
                 File destPath = new File(path);
 
@@ -1970,21 +1852,21 @@ public class DroneModel {
                         outputStream = new FileOutputStream(destPath);
                         bos = new BufferedOutputStream(outputStream);
                         parent.Log("아웃풋 스트림 생성");
-                        list.get(i).pullOriginalMediaFileFromCamera(0, new MediaFileDownloadListener() {
+                        mediaManager.getMediaFileListData().getData().get(0).pullOriginalMediaFileFromCamera(0, new MediaFileDownloadListener() {
                             @Override
                             public void onStart() {
-                                Log.i(TAG, index + "번째 아이템 pull시작");
+                                Log.i(TAG, 0 + "번째 아이템 pull시작");
                             }
 
                             @Override
                             public void onProgress(long total, long current) {
                                 double percentage = ((double) current / total) * 100;
-                                Log.i(TAG, String.format(index + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
+                                Log.i(TAG, String.format(0 + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
                             }
 
                             @Override
                             public void onRealtimeDataUpdate(byte[] data, long position) {
-                                Log.i(TAG, index + "번째 아이템 실시간 업데이트");
+                                Log.i(TAG, 0 + "번째 아이템 실시간 업데이트");
                                 try {
                                     bos.write(data, 0, data.length);
 
@@ -2003,27 +1885,26 @@ public class DroneModel {
                                 }
 
                                 processingImageInfo(String.valueOf(destPath), 1920, 1080);
-                                Log.i(TAG, index + "번째 아이템 pull 종료");
-                                listTodelete.add(list.get(index));
-                                deletemediafilefromCamera(listTodelete);
+                                Log.i(TAG, 0 + "번째 아이템 pull 종료");
+
 
                             }
 
                             @Override
                             public void onFailure(IDJIError error) {
-                                Log.i(TAG, index + "번째 아이템 pull 실패");
+                                Log.i(TAG, 0 + "번째 아이템 pull 실패");
                             }
                         });
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
                 else {
-                    Log.i(TAG, i + "번째 아이템 이미있음");
+                    Log.i(TAG, 0 + "번째 아이템 이미있음");
                 }
 
 
             }
-        }
+
 
     }
 
