@@ -40,20 +40,16 @@ public class WpMissionManager {
     private ArrayList<msg_mission_item> mMissionItemList;
     private ArrayList<msg_mission_item_int> mMissionItemintList;
     private ArrayList<WaypointInfoModel> mWLIMList;
-    String WAYPOINT_SAMPLE_FILE_NAME = "waypointsample.kmz";
+
     String WAYPOINT_SAMPLE_FILE_DIR = "waypoint/";
-    String WAYPOINT_SAMPLE_FILE_CACHE_DIR = "waypoint/cache/";
-    String WAYPOINT_FILE_TAG = ".kmz";
-    String unzipChildDir = "temp/";
-    String unzipDir = "wpmz/";
-    String curMissionPath = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR + WAYPOINT_SAMPLE_FILE_NAME);
+
     String rootDir = DiskUtil.getExternalCacheDirPath(ContextUtil.getContext(), WAYPOINT_SAMPLE_FILE_DIR);
 
     String kmzOutPath = rootDir + "generate_test_ddm.kmz";
     DroneModel model;
-    int status = 0;
+
     DefaultLayoutActivity mainActivity;
-    Disposable mDisposable;
+
 
     public WpMissionManager(MAVLinkReceiver MAVLinkReceiver, DroneModel model, DefaultLayoutActivity defaultLayoutActivity) {
         this.receiver = MAVLinkReceiver;
@@ -61,13 +57,6 @@ public class WpMissionManager {
         this.mainActivity = defaultLayoutActivity;
     }
 
-    public void setReceiver(MAVLinkReceiver receiver) {
-        this.receiver = receiver;
-    }
-
-    public MAVLinkReceiver getReceiver() {
-        return receiver;
-    }
 
     public ArrayList<WaypointInfoModel> initmWLIMList() {
         if (mWLIMList != null) {
@@ -85,13 +74,6 @@ public class WpMissionManager {
         return mMissionItemList;
     }
 
-    public void setmMissionItemintList(ArrayList<msg_mission_item_int> mMissionItemintList) {
-        this.mMissionItemintList = mMissionItemintList;
-    }
-
-    public void setmMissionItemList(ArrayList<msg_mission_item> mMissionItemList) {
-        this.mMissionItemList = mMissionItemList;
-    }
 
     public void setmWLIMList(ArrayList<WaypointInfoModel> mWLIMList) {
         this.mWLIMList = mWLIMList;
@@ -101,33 +83,11 @@ public class WpMissionManager {
         return mMissionItemList;
     }
 
-    public ArrayList<WaypointInfoModel> getmWLIMList() {
-        return mWLIMList;
-    }
 
     public ArrayList<msg_mission_item_int> getmMissionItemintList() {
         return mMissionItemintList;
     }
 
-    //clear는 임무 종료시점에  호출하여 지워야 함, 시점은 회의를 통해 특정해야
-    public ArrayList<msg_mission_item> clearmMissionItemList() {
-        mMissionItemList.clear();
-        return mMissionItemList;
-    }
-
-    public ArrayList<WaypointInfoModel> clearmWLIMList() {
-        mWLIMList.clear();
-        return mWLIMList;
-    }
-
-    public ArrayList<msg_mission_item_int> clearmMissionItemintList() {
-        mMissionItemintList.clear();
-        return mMissionItemintList;
-    }
-
-    public void setKmzOutPath(String kmzOutPath) {
-        this.kmzOutPath = kmzOutPath;
-    }
 
     public String getKmzOutPath() {
         return kmzOutPath;
@@ -159,6 +119,7 @@ public class WpMissionManager {
 
                         WaylineWaypoint waypoint = createWaypoint(msg, speedChanged ? changedSpeed : defaultSpeed);
                         addWaypointToList(waypoint, actionInfos);
+
                     } else if (msg.z != 0) {
                         Log.d(TAG, "Waypoint LAT: " + msg.x + ", LAN: " + msg.y + ", ALT: " + msg.z);
                         WaylineWaypoint waypoint = createWaypoint(msg, speedChanged ? changedSpeed : defaultSpeed);
@@ -204,6 +165,13 @@ public class WpMissionManager {
 
                 case MAV_CMD.MAV_CMD_NAV_RETURN_TO_LAUNCH:
                     Log.d(TAG, "MAV_CMD_NAV_RETURN_TO_LAUNCH");
+                    int size = mWLIMList.size();
+
+                    String Height = mWLIMList.get(size - 1).getWaylineWaypoint().getHeight().toString();
+
+                    double numberDouble = Double.parseDouble(Height);
+                    model.set_RTL_Heigt((int) numberDouble);
+                    model.set_RTL_speed(3.0);
                     break;
 
                 case MAV_CMD.MAV_CMD_NAV_DELAY:
@@ -258,6 +226,7 @@ public class WpMissionManager {
         waypoint.setSpeed(speed);
         waypoint.setUseGlobalTurnParam(true);
         waypoint.setWaypointIndex(this.mWLIMList.size());
+
         return waypoint;
     }
 
@@ -294,7 +263,6 @@ public class WpMissionManager {
         WaylineMissionConfig wlmc = KMZTestUtil.createMissionConfig();
         Template template = KMZTestUtil.createTemplate(this.mWLIMList);
 
-
         File file = new File(kmzOutPath);
         if (file.exists()) {//기존 경로에 파일 있으면 삭제
             Log.i(TAG, "kmzFile exists, so Deleted it: " + rootDir);
@@ -302,15 +270,6 @@ public class WpMissionManager {
         }
         manager.generateKMZFile(kmzOutPath, wlm, wlmc, template);
         this.mWLIMList.clear();
-
-    }
-
-
-    public int uploadKMZfile(CommonCallbacks.CompletionCallbackWithProgress<Double> callback) {
-
-
-        WaypointMissionManager.getInstance().pushKMZFileToAircraft(kmzOutPath, callback);
-        return status;
 
     }
 

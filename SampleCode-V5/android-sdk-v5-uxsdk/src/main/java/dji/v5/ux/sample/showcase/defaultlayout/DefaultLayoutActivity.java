@@ -104,6 +104,7 @@ import dji.v5.manager.datacenter.livestream.LiveVideoBitrateMode;
 import dji.v5.manager.datacenter.livestream.StreamQuality;
 import dji.v5.manager.datacenter.livestream.settings.RtmpSettings;
 import dji.v5.manager.interfaces.ICameraStreamManager;
+import dji.v5.manager.interfaces.IMediaManager;
 import dji.v5.network.DJINetworkManager;
 import dji.v5.network.IDJINetworkStatusListener;
 import dji.v5.utils.common.JsonUtil;
@@ -144,6 +145,7 @@ import dji.v5.ux.sample.util.DroneModel;
 import dji.v5.ux.sample.util.MAVLinkReceiver;
 import dji.v5.ux.sample.util.MAVParam;
 import dji.v5.ux.sample.util.StreamDialog;
+import dji.v5.ux.sample.util.ImageDialog;
 import dji.v5.ux.sample.util.WpMissionManager;
 import dji.v5.ux.sample.util.video.DDMImageHandler;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
@@ -217,6 +219,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     String id, gcsip, gcsport;
     private Button streamingButton;
     StreamDialog streamDialog;
+    ImageDialog imageDialog;
     String streamAddress;
     DDMImageHandler ddmImageHandler;
 
@@ -263,10 +266,20 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         streamDialog = new StreamDialog(this);
         drowIcon = findViewById(R.id.imageView);
         cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
+        imageDialog = new ImageDialog(this);
 
 
+        imageDialog.setDialogListener(new ImageDialog.ImageDialogInterface() {
+            @Override
+            public void downBtnClicked() {
+                 mModel.downloadPhotofromdrone();
+            }
 
-
+            @Override
+            public void deleteBtnClicked() {
+                 mModel.deleteAllmediafilefromCamera();
+            }
+        });
         streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
             @Override
             public void startBtnClicked() {
@@ -354,7 +367,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
-
+        mModel.initmediamanager();
 
         //mqtt메시지 보내는 코드 정상동작 확인 240711자
         Thread mqttTestThread = new Thread(() -> {
@@ -365,7 +378,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
                     mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
                     mModel.takePhoto();
-                    Thread.sleep(1000 * 15); //15 초마다
+                    Thread.sleep(1000 * 5); //5 초마다
 
                 }
             } catch (Exception e) {
@@ -373,10 +386,11 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             }
         });
         mqttTestThread.start();
+
         drowIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mModel.downloadPhotofromdrone();
+                imageDialog.show();
             }
         });
 
@@ -393,9 +407,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         ddmImageHandler = new DDMImageHandler(this, mModel, primaryFpvWidget.getWidth(), primaryFpvWidget.getHeight());
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
+        mModel.createdir();
 
 
-//        mModel.initmediamanager();
+
 
 
     }
@@ -556,6 +571,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 //        mapWidget.onDestroy();
+       // mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
         MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
