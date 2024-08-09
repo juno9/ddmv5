@@ -272,12 +272,12 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         imageDialog.setDialogListener(new ImageDialog.ImageDialogInterface() {
             @Override
             public void downBtnClicked() {
-                 mModel.downloadPhotofromdrone();
+                mModel.downloadPhotofromdrone();
             }
 
             @Override
             public void deleteBtnClicked() {
-                 mModel.deleteAllmediafilefromCamera();
+                mModel.deleteAllmediafilefromCamera();
             }
         });
         streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
@@ -367,25 +367,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         mModel = new DroneModel(this);
         mModel.setSystemId(Integer.parseInt(id));
-        mModel.initmediamanager();
 
-        //mqtt메시지 보내는 코드 정상동작 확인 240711자
-        Thread mqttTestThread = new Thread(() -> {
-            try {
-                //DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
-
-                while (true) {
-
-                    mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
-                    mModel.takePhoto();
-                    Thread.sleep(1000 * 5); //5 초마다
-
-                }
-            } catch (Exception e) {
-                Log.i(TAG, "exception : " + e.toString());
-            }
-        });
-        mqttTestThread.start();
 
         drowIcon.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -398,7 +380,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         prefs.edit().putString("pref_stream_address", streamAddress).apply();
         prefs.edit().apply();
         mReceiver = new MAVLinkReceiver(this, mModel);
-
+        mModel.createdir();
         wpMissionmanager = new WpMissionManager(mReceiver, mModel, this);
         mReceiver.setWpMissionManager(wpMissionmanager);
 
@@ -407,9 +389,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         ddmImageHandler = new DDMImageHandler(this, mModel, primaryFpvWidget.getWidth(), primaryFpvWidget.getHeight());
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
-        mModel.createdir();
-
-
 
 
 
@@ -571,7 +550,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 //        mapWidget.onDestroy();
-       // mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
+         mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
         MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
@@ -904,6 +883,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 //                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 5000); // 2000
 
 
+                MqttImagesenderTimerTask mqttImagesenderTimerTask = new MqttImagesenderTimerTask(mainActivityWeakReference);
+                timer = new Timer(true);
+               timer.scheduleAtFixedRate(mqttImagesenderTimerTask, 0, 2000); // 2000
                 while (!isCancelled()) {
                     // Listen for packets
                     try {
@@ -1232,6 +1214,37 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         public void run() {
             if (mainActivityWeakReference.get().ddmImageHandler != null)
                 mainActivityWeakReference.get().ddmImageHandler.tick();
+        }
+    }
+
+    private static class MqttImagesenderTimerTask extends TimerTask {
+
+        private WeakReference<DefaultLayoutActivity> mainActivityWeakReference;
+
+        MqttImagesenderTimerTask(WeakReference<DefaultLayoutActivity> mainActivityWeakReference) {
+            this.mainActivityWeakReference = mainActivityWeakReference;
+        }
+
+        @Override
+        public void run() {
+            mainActivityWeakReference.get().mModel.initmediamanager();
+
+            //mqtt메시지 보내는 코드 정상동작 확인 240711자
+            Thread mqttTestThread = new Thread(() -> {
+                try {
+                    //DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
+
+
+                    mainActivityWeakReference.get().mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
+                    mainActivityWeakReference.get().mModel.takePhoto();
+                    Thread.sleep(1000 * 2); //2 초마다
+
+
+                } catch (Exception e) {
+                    Log.i(mainActivityWeakReference.get().TAG, "exception : " + e.toString());
+                }
+            });
+            mqttTestThread.start();
         }
     }
 

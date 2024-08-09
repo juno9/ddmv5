@@ -1833,77 +1833,76 @@ public class DroneModel {
         ;
 
 
-            Log.i(TAG, 0 + "번째 아이템 for문 시작 파일 형식 : " + mediaManager.getMediaFileListData().getData().get(0).getFileType().toString());
+        Log.i(TAG, 0 + "번째 아이템 for문 시작 파일 형식 : " + mediaManager.getMediaFileListData().getData().get(0).getFileType().toString());
 
 
+        if (mediaManager.getMediaFileListData().getData().get(0).getFileType() == MediaFileType.JPEG && (mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("V.JPG") || mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("W.JPG"))) {
+            Log.i(TAG, 0 + "번째 아이템 파일형식 JPEG, W 또는 V로 끝남");
+            FileOutputStream outputStream;
+            BufferedOutputStream bos;
 
-            if (mediaManager.getMediaFileListData().getData().get(0).getFileType() == MediaFileType.JPEG && (mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("V.JPG") || mediaManager.getMediaFileListData().getData().get(0).getFileName().endsWith("W.JPG"))) {
-                Log.i(TAG, 0 + "번째 아이템 파일형식 JPEG, W 또는 V로 끝남");
-                FileOutputStream outputStream;
-                BufferedOutputStream bos;
-
-                String fileName = mediaManager.getMediaFileListData().getData().get(0).getFileName();
-                String path = recordDirectory.getPath() + File.separator + fileName;
-                File destPath = new File(path);
+            String fileName = mediaManager.getMediaFileListData().getData().get(0).getFileName();
+            String path = recordDirectory.getPath() + File.separator + fileName;
+            File destPath = new File(path);
 
 
-                if (!destPath.exists())
-                    try {
-                        outputStream = new FileOutputStream(destPath);
-                        bos = new BufferedOutputStream(outputStream);
-                        parent.Log("아웃풋 스트림 생성");
-                        mediaManager.getMediaFileListData().getData().get(0).pullOriginalMediaFileFromCamera(0, new MediaFileDownloadListener() {
-                            @Override
-                            public void onStart() {
-                                Log.i(TAG, 0 + "번째 아이템 pull시작");
+            if (!destPath.exists())
+            {try {
+                    outputStream = new FileOutputStream(destPath);
+                    bos = new BufferedOutputStream(outputStream);
+                    parent.Log("아웃풋 스트림 생성");
+                    mediaManager.getMediaFileListData().getData().get(0).pullOriginalMediaFileFromCamera(0, new MediaFileDownloadListener() {
+                        @Override
+                        public void onStart() {
+                            Log.i(TAG, 0 + "번째 아이템 pull시작");
+                        }
+
+                        @Override
+                        public void onProgress(long total, long current) {
+                            double percentage = ((double) current / total) * 100;
+                            Log.i(TAG, String.format(0 + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
+                        }
+
+                        @Override
+                        public void onRealtimeDataUpdate(byte[] data, long position) {
+                            Log.i(TAG, 0 + "번째 아이템 실시간 업데이트");
+                            try {
+                                bos.write(data, 0, data.length);
+
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        @RequiresApi(api = Build.VERSION_CODES.O)
+                        @Override
+                        public void onFinish() {
+                            try {
+                                bos.flush();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
                             }
 
-                            @Override
-                            public void onProgress(long total, long current) {
-                                double percentage = ((double) current / total) * 100;
-                                Log.i(TAG, String.format(0 + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
-                            }
-
-                            @Override
-                            public void onRealtimeDataUpdate(byte[] data, long position) {
-                                Log.i(TAG, 0 + "번째 아이템 실시간 업데이트");
-                                try {
-                                    bos.write(data, 0, data.length);
-
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-
-                            @RequiresApi(api = Build.VERSION_CODES.O)
-                            @Override
-                            public void onFinish() {
-                                try {
-                                    bos.flush();
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-
-                                processingImageInfo(String.valueOf(destPath), 1920, 1080);
-                                Log.i(TAG, 0 + "번째 아이템 pull 종료");
+                            processingImageInfo(String.valueOf(destPath), 1920, 1080);
+                            Log.i(TAG, 0 + "번째 아이템 pull 종료");
 
 
-                            }
+                        }
 
-                            @Override
-                            public void onFailure(IDJIError error) {
-                                Log.i(TAG, 0 + "번째 아이템 pull 실패");
-                            }
-                        });
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                else {
-                    Log.i(TAG, 0 + "번째 아이템 이미있음");
-                }
-
-
+                        @Override
+                        public void onFailure(IDJIError error) {
+                            Log.i(TAG, 0 + "번째 아이템 pull 실패");
+                        }
+                    });
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }}
+            else {
+                Log.i(TAG, 0 + "번째 아이템 이미있음");
             }
+
+
+        }
 
 
     }
@@ -1945,7 +1944,7 @@ public class DroneModel {
     public void takePhoto() {
         // 카메라 모드변경
 
-
+        initmediamanager();
         keyManager.setValue(KeyTools.createKey(CameraKey.KeyCameraMode), PHOTO_NORMAL, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
@@ -2392,6 +2391,7 @@ public class DroneModel {
         imageMap.put("imageHeight", imageHeight);
         imageMap.put("imageSeq", imageIndex++);
         imageMap.put("image", imageHex);
+        imageMap.put("lat", (int) (lat * 10000000));
         imageMap.put("lat", (int) (lat * 10000000));
         imageMap.put("lon", (int) (lng * 10000000));
         imageMap.put("alt", (int) (alt * 1000));

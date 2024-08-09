@@ -157,10 +157,7 @@ public class DDMMqttClient implements MqttCallback {
         this.client = client;
     }
 
-    /**
-     * 종료메소드입니다.<br>
-     * 클라이언트를 종료 합니다.
-     */
+
     public void close() {
         if (client != null) {
             try {
