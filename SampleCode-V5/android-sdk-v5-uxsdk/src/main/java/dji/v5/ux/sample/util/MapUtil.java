@@ -25,12 +25,20 @@ package dji.v5.ux.sample.util;
 
 import android.os.Build;
 
+import java.util.Scanner;
+
 import dji.v5.utils.common.LogUtils;
 
 /**
  * Utility class for maps.
  */
 public final class MapUtil {
+
+
+
+
+
+
 
     private static final String TAG = "MapUtil";
 
@@ -57,6 +65,9 @@ public final class MapUtil {
         //The possible values are armeabi, armeabi-v7a, arm64-v8a, x86, x86_64, mips, mips64.
         return abi.contains("arm");
     }
+
+
+
 
 //    /**
 //     * Google maps are supported only if Google Play Services are available on this device.

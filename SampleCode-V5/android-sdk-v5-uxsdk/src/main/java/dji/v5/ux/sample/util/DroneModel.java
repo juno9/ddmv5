@@ -240,16 +240,41 @@ public class DroneModel {
         keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyLimitMaxFlightHeightInMeter), height, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onSuccess() {
-                ////parent.Log("Max height set to " + height + "m");
+                parent.Log("Max height set to " + height + "m");
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                ////parent.Log("Error setting max height " + idjiError.description());
+                parent.Log("Error setting max height " + idjiError.description());
             }
         });
 
+
+
     }
+    void settakeoffHeight(final double height) {
+
+        keyManager.setValue(KeyTools.createKey(FlightControllerKey.KeyTakeoffLocationAltitude), height, new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                parent.Log("Max height set to " + height + "m");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                parent.Log("Error setting max height " + idjiError.description());
+            }
+        });
+
+
+
+    }
+
+
+
+
+
+
 
     void do_takeoff(float alt) {
         mAutonomy = false;
@@ -1324,7 +1349,7 @@ public class DroneModel {
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                Log.i(TAG, "upload failed");
+                Log.i(TAG, "upload failed : "+idjiError.description().toString());
             }
         });
     }
@@ -1856,13 +1881,11 @@ public class DroneModel {
                         public void onStart() {
                             Log.i(TAG, 0 + "번째 아이템 pull시작");
                         }
-
                         @Override
                         public void onProgress(long total, long current) {
                             double percentage = ((double) current / total) * 100;
                             Log.i(TAG, String.format(0 + "번째 아이템 onProgress: %.2f%% (%d/%d)", percentage, current, total));
                         }
-
                         @Override
                         public void onRealtimeDataUpdate(byte[] data, long position) {
                             Log.i(TAG, 0 + "번째 아이템 실시간 업데이트");
@@ -1873,22 +1896,18 @@ public class DroneModel {
                                 throw new RuntimeException(e);
                             }
                         }
-
                         @RequiresApi(api = Build.VERSION_CODES.O)
                         @Override
                         public void onFinish() {
                             try {
+                                //여기서 송신해야 한다.
                                 bos.flush();
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
-
                             processingImageInfo(String.valueOf(destPath), 1920, 1080);
                             Log.i(TAG, 0 + "번째 아이템 pull 종료");
-
-
                         }
-
                         @Override
                         public void onFailure(IDJIError error) {
                             Log.i(TAG, 0 + "번째 아이템 pull 실패");
@@ -2410,7 +2429,7 @@ public class DroneModel {
     public void publishImageInfo(int droneId, Map<String, Object> imageInfo) {
         Log.e(TAG, "publishImageInfo start :" + imageInfo.toString());
         try {
-            DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(parent.getApplicationContext()
+            DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(parent
                     , "192.168.110.93"
                     , "1883"
                     , "clrobur/mapping/ddm/" // sub

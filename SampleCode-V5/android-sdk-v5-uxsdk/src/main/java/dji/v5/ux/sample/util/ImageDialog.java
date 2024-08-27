@@ -1,11 +1,10 @@
 package dji.v5.ux.sample.util;
 
-import android.annotation.SuppressLint;
+
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
+
 import android.view.View;
 import android.widget.Button;
 
@@ -23,8 +22,8 @@ public class ImageDialog extends Dialog {
     }
 
     public interface ImageDialogInterface {
-        void downBtnClicked();
-        void deleteBtnClicked();
+        void startBtnClicked();
+        void stopBtnClicked();
 
     }
 
@@ -41,7 +40,7 @@ public class ImageDialog extends Dialog {
         download.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ImageDialogInterface.downBtnClicked();
+                ImageDialogInterface.startBtnClicked();
             }
         });
 
@@ -49,7 +48,7 @@ public class ImageDialog extends Dialog {
         delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ImageDialogInterface.deleteBtnClicked();
+                ImageDialogInterface.stopBtnClicked();
             }
         });
 

@@ -1,8 +1,15 @@
 package dji.sampleV5.aircraft
 
 import android.app.Application
+import android.os.Environment
+import android.util.Log
 import dji.sampleV5.aircraft.models.MSDKManagerVM
 import dji.sampleV5.aircraft.models.globalViewModels
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+
 
 /**
  * Class Description
@@ -21,6 +28,12 @@ open class DJIApplication : Application() {
 
         // Ensure initialization is called first
         msdkManagerVM.initMobileSDK(this)
+
+
     }
+
+
+
+
 
 }

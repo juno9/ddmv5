@@ -10,14 +10,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dji.sdk.wpmz.value.mission.ActionAircraftHoverParam;
+import dji.sdk.wpmz.value.mission.ActionAircraftRotateFollowSpeedParam;
 import dji.sdk.wpmz.value.mission.ActionAircraftRotateYawParam;
 import dji.sdk.wpmz.value.mission.ActionTakePhotoParam;
 import dji.sdk.wpmz.value.mission.WaylineActionInfo;
 import dji.sdk.wpmz.value.mission.WaylineActionType;
+import dji.sdk.wpmz.value.mission.WaylineCoordinateParam;
 import dji.sdk.wpmz.value.mission.WaylineLocationCoordinate2D;
 import dji.sdk.wpmz.value.mission.WaylineMission;
 import dji.sdk.wpmz.value.mission.WaylineMissionConfig;
 import dji.sdk.wpmz.value.mission.WaylineWaypoint;
+import dji.sdk.wpmz.value.mission.WaylineWaypointGimbalHeadingParam;
 import dji.sdk.wpmz.value.mission.WaylineWaypointYawPathMode;
 import dji.v5.common.callback.CommonCallbacks;
 import dji.v5.manager.aircraft.waypoint3.WaypointMissionManager;
@@ -106,18 +109,19 @@ public class WpMissionManager {
         // Loop through the mission items
         for (int i = 0; i < this.getmMissionItemList().size(); i++) {
             Log.d(TAG, "\n===================================================" + i + "번째 아이템 " + "=======================================================");
-            msg_mission_item msg = this.getmMissionItemList().get(i);
+            msg_mission_item msg = this.getmMissionItemList().get(i);//수신한 메시지 목록
 
             switch (msg.command) {
                 case MAV_CMD.MAV_CMD_NAV_WAYPOINT:
 
-                    if (msg.param1 > 0 && (msg.x != 0 || msg.y != 0 || msg.z != 0)) {//웨이포인트 아이템인데 메시지의 파라미터1번이 0보다 크다 + x,y,z모두 0보다 크다 - 웨이포인트 아이템이다.
+                    if (msg.param1 > 0 && (msg.x != 0 && msg.y != 0 && msg.z != 0)) {//딜레이 시간이 달려있고,x,y,z가 모두 0이 아니어야 함.
                         Log.d(TAG, "Delay: " + msg.param1);
                         WaylineActionInfo hoverAction = createHoverAction(msg.param1);
                         actionInfos.add(hoverAction);
                         actionInfosList.add(actionInfos);
 
                         WaylineWaypoint waypoint = createWaypoint(msg, speedChanged ? changedSpeed : defaultSpeed);
+
                         addWaypointToList(waypoint, actionInfos);
 
                     } else if (msg.z != 0) {
@@ -246,9 +250,13 @@ public class WpMissionManager {
         ActionAircraftRotateYawParam param = new ActionAircraftRotateYawParam();
         param.setHeading(heading);
         param.setPathMode(WaylineWaypointYawPathMode.CLOCKWISE);
+
         info.setAircraftRotateYawParam(param);
         Log.d(TAG, "Condition Yaw Action Created");
         return info;
+
+
+
     }
 
     // Helper method to update actions of the latest waypoint
@@ -260,8 +268,13 @@ public class WpMissionManager {
     public void saveKMZfile() {
         WPMZManager manager = WPMZManager.getInstance();
         WaylineMission wlm = KMZTestUtil.createWaylineMission();
+
         WaylineMissionConfig wlmc = KMZTestUtil.createMissionConfig();
+        wlmc.setSecurityTakeOffHeight(this.mWLIMList.get(0).getWaylineWaypoint().getEllipsoidHeight());//이륙고도 수정
+
         Template template = KMZTestUtil.createTemplate(this.mWLIMList);
+
+
 
         File file = new File(kmzOutPath);
         if (file.exists()) {//기존 경로에 파일 있으면 삭제

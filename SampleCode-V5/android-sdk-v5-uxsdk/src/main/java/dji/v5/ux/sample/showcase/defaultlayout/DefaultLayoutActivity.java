@@ -36,6 +36,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
@@ -65,6 +66,8 @@ import com.naver.maps.map.overlay.Marker;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -76,6 +79,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -226,6 +231,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private LiveStreamManager iLiveStreamManager;
     private CameraStreamManager iCameraStreamManager;
     List<VideoSourceEntity> cameraList;
+    private boolean ismapping = false;
     //private DDMImageHandler mDDMImageHandler;
     //endregion
 
@@ -271,13 +277,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         imageDialog.setDialogListener(new ImageDialog.ImageDialogInterface() {
             @Override
-            public void downBtnClicked() {
-                mModel.downloadPhotofromdrone();
+            public void startBtnClicked() {
+                ismapping = true;
             }
 
             @Override
-            public void deleteBtnClicked() {
-                mModel.deleteAllmediafilefromCamera();
+            public void stopBtnClicked() {
+                ismapping = false;
             }
         });
         streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
@@ -285,6 +291,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             public void startBtnClicked() {
                 Log.i(TAG, "스타트버튼 눌림");
                 //이거 눌리면 ip값이랑 카메라값, 품질값 받아와서 실행해야 함.
+                setRTMP();
                 startLiveStream();
                 streamDialog.dismiss();
             }
@@ -391,7 +398,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
 
 
-
     }
 
     private void isGimableAdjustClicked(BroadcastValues broadcastValues) {
@@ -437,7 +443,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 streamDialog.setStreamAddress(streamAddress);
                 streamDialog.getCameraGroup().removeAllViews();//카메라 리스트에 표출할 카메라 목록을 만들어주는거
                 for (int i = 0; i < cameraList.size(); i++) {
-                    RadioButton radioButton = new RadioButton(getApplicationContext());
+                    RadioButton radioButton = new RadioButton(DefaultLayoutActivity.this);
                     radioButton.setText(cameraList.get(i).getPosition().toString());
                     streamDialog.getCameraGroup().addView(radioButton);
                     if (i == 0) {
@@ -550,22 +556,13 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 //        mapWidget.onDestroy();
-         mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
+        //  mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
         MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
         closeGCSCommunicator();
-        iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
-            @Override
-            public void onSuccess() {
-                Log("스트리밍 멈춤");
-            }
-
-            @Override
-            public void onFailure(@NonNull IDJIError idjiError) {
-                Log("스트리밍 멈춤 실패");
-            }
-        });
+        stopStream();
+        makelogfile(mNewDJI);
 
     }
 
@@ -794,30 +791,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
     }
 
-    private void loadMockParamFile() {
-        mModel.getParams().clear();
-        try {
-
-            AssetManager am = getAssets();
-            InputStream is = am.open("DJIMock.txt");
-            InputStreamReader inputStreamReader = new InputStreamReader(is);
-            BufferedReader br = new BufferedReader(inputStreamReader);
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.startsWith("#"))
-                    continue;
-                String[] paramData = line.split("\t");
-                String paramName = paramData[2];
-                float paramValue = Float.parseFloat(paramData[3]);
-                short paramType = Short.parseShort(paramData[4]);
-
-                mModel.getParams().add(new MAVParam(paramName, paramValue, paramType));
-            }
-        } catch (IOException e) {
-            Log.d(TAG, "exception", e);
-        }
-    }
 
     //added
     private static class GCSSenderTimerTask extends TimerTask {
@@ -866,7 +839,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         @Override
 
         protected Integer doInBackground(Integer... ints2) {
-            Log.d("RDTHREADS", "doInBackground()");
+            Log.d("DDMTHREADS", "doInBackground()");
 
             try {
                 createTelemetrySocket();
@@ -882,10 +855,12 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 //                timer = new Timer(true);
 //                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 5000); // 2000
 
+//mqtt 이미지 전송
+//                MqttImagesenderTimerTask mqttImagesenderTimerTask = new MqttImagesenderTimerTask(mainActivityWeakReference);
+//                timer = new Timer(true);
+//                timer.scheduleAtFixedRate(mqttImagesenderTimerTask, 0, 2000); // 2000
 
-                MqttImagesenderTimerTask mqttImagesenderTimerTask = new MqttImagesenderTimerTask(mainActivityWeakReference);
-                timer = new Timer(true);
-               timer.scheduleAtFixedRate(mqttImagesenderTimerTask, 0, 2000); // 2000
+
                 while (!isCancelled()) {
                     // Listen for packets
                     try {
@@ -912,8 +887,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
                                     imageView.setBackground(connectedDrawable);
                                     imageView.invalidate();
-
-
                                 });
                                 //라이브스트림 매니저는 setquality, setbitrate등의 메소드를 제공
                             } else {
@@ -925,7 +898,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     imageView.invalidate();
                                 });
                             }
-
                             mainActivityWeakReference.get().connectivityHasChanged = false;
                         }
 
@@ -1081,7 +1053,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
                 Log.d(TAG, "mTcpSocket :: Success. Received-IP:" + mainActivityWeakReference.get().isa.getAddress() + " / Received-localport:" + mainActivityWeakReference.get().isa.getPort());
 
-
                 mainActivityWeakReference.get().mModel.isTcpWorker = true;
                 // exist Udp Out
 //                mainActivityWeakReference.get().socket = new DatagramSocket();
@@ -1091,16 +1062,20 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 mainActivityWeakReference.get().logMessageDJI("Starting GCS TCP Out telemetry link: " + gcsIPString + ":" + telemIPPort);
             } catch (SocketException e) {
                 Log.d(TAG, "createTelemetrySocket() - socket exception");
+
+
                 Log.d(TAG, "exception", e);
                 mainActivityWeakReference.get().logMessageDJI("Telemetry socket exception: " + gcsIPString + ":" + telemIPPort);
             } // TODO
             catch (UnknownHostException e) {
                 Log.d(TAG, "createTelemetrySocket() - unknown host exception");
+
                 Log.d(TAG, "exception", e);
                 mainActivityWeakReference.get().logMessageDJI("Unknown telemetry host: " + gcsIPString + ":" + telemIPPort);
             } // TODO
             catch (IOException e) {
                 Log.d(TAG, "createTelemetrySocket() - io socket exception  unknown host exception");
+
                 Log.d(TAG, "exception", e);
                 mainActivityWeakReference.get().logMessageDJI("Unknown telemetry host: " + gcsIPString + ":" + telemIPPort);
                 return;
@@ -1232,14 +1207,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             //mqtt메시지 보내는 코드 정상동작 확인 240711자
             Thread mqttTestThread = new Thread(() -> {
                 try {
-                    //DDMMqttClient client = DDMMqttClient.getSimpleMqttClient(this, "192.168.110.93", "1883", "clrobur/mapping/drone" + id);
-
-
-                    mainActivityWeakReference.get().mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
-                    mainActivityWeakReference.get().mModel.takePhoto();
-                    Thread.sleep(1000 * 2); //2 초마다
-
-
+                    if (mainActivityWeakReference.get().ismapping) {
+                        mainActivityWeakReference.get().mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
+                        mainActivityWeakReference.get().mModel.takePhoto();
+                    }
                 } catch (Exception e) {
                     Log.i(mainActivityWeakReference.get().TAG, "exception : " + e.toString());
                 }
@@ -1248,19 +1219,18 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
     }
 
-    public void startLiveStream() {
-        //RTMP 스트리밍 기능 추가
-
-
+    public void setRTMP() {
         LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
                 .setLiveStreamType(LiveStreamType.RTMP)
                 .setRtmpSettings(new RtmpSettings.Builder()
-
                         .setUrl(streamAddress)
                         .build()
                 ).build();
-
         iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
+    }
+
+    public void startLiveStream() {
+        //RTMP 스트리밍 기능 추가
 
 
         iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
@@ -1273,7 +1243,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                toast("스트리밍 못함");
+                toast("스트리밍 못함 : \n" + idjiError.description().toString());
                 Log("스트리밍 못함");
             }
         });
@@ -1290,7 +1260,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
-                toast("스트리밍 멈춤 실패");
+                toast("스트리밍 멈춤 실패 : \n" + idjiError.description().toString());
 
             }
         });
@@ -1310,10 +1280,14 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
     public void logMessageDJI(String msg) {
         Log.d(TAG, msg);
+        Date date = new Date(System.currentTimeMillis());
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddhhmmss");
+        String time = format.format(date);
+
         if (mNewDJI.length() > 1000)
             mNewDJI = mNewDJI.substring(500, 1000);
 
-        mNewDJI += "\n" + msg;
+        mNewDJI += "\n"+time+" : " + msg;
     }
 
     public void Log(String input) {
@@ -1321,8 +1295,79 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     }
 
     public void toast(String input) {
-        Toast.makeText(getApplicationContext(), input, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, input, Toast.LENGTH_SHORT).show();
     }
 
+    public void makelogfile(String input) {
+
+        Date date = new Date(System.currentTimeMillis());
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddhhmmss");
+        String time = format.format(date);
+
+        if (isExternalStorageWritable()) {
+            // External storage is readable and writable
+
+            File appDirectory = new File(Environment.getExternalStorageDirectory() + "/DDMV5");
+            File logDirectory = new File(appDirectory + "/logs");
+
+            // Create appDirectory if it doesn't exist
+            if (!appDirectory.exists()) {
+                appDirectory.mkdirs();
+            }
+
+            // Create logDirectory if it doesn't exist
+            if (!logDirectory.exists()) {
+                logDirectory.mkdirs();
+            }
+
+            // Create the log file
+            File logFile = new File(logDirectory, "logcat_" + time + ".txt");
+            Log.d(TAG, "*** onCreate() - logFile :: " + logFile);
+
+            // Write the input string to the log file
+            try (FileWriter writer = new FileWriter(logFile)) {
+                writer.write(input);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        } else if (isExternalStorageReadable()) {
+            // External storage is only readable
+            Log.d(TAG, "External storage is only readable. Cannot write the log file.");
+        } else {
+            // External storage is not accessible
+            Log.d(TAG, "External storage is not accessible.");
+        }
+    }
+
+
+
+    /**
+     * 외부저장소 read/write 가능 여부 확인
+     *
+     * @return
+     */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+
+    /**
+     * 외부저장소 read 가능 여부 확인
+     *
+     * @return
+     */
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 
 }
