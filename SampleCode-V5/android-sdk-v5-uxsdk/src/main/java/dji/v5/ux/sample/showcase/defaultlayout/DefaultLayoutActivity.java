@@ -289,7 +289,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
             @Override
             public void startBtnClicked() {
-                Log.i(TAG, "스타트버튼 눌림");
+                Log("Streaming Strat button clicked");
                 //이거 눌리면 ip값이랑 카메라값, 품질값 받아와서 실행해야 함.
                 setRTMP();
                 startLiveStream();
@@ -298,7 +298,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             @Override
             public void stopBtnClicked() {
-                Log.i(TAG, "스탑버튼 눌림");
+                Log( "Streaming Stop button clicked");
                 stopStream();
                 streamDialog.dismiss();
             }
@@ -561,6 +561,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
         closeGCSCommunicator();
+
+
         stopStream();
         makelogfile(mNewDJI);
 
@@ -1252,14 +1254,16 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     public void stopStream() {
         iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
             @Override
-            public void onSuccess() {
+            public void onSuccess() {//앱 실행여부 판단하는 플래그 하나 달아야 할듯.
                 streamingButton.setText("start\nstream");
+               Log("Streaming stopped successfully");
                 toast("스트리밍 멈춤");
 
             }
 
             @Override
             public void onFailure(@NonNull IDJIError idjiError) {
+                Log("Streaming stopped failed "+idjiError.description().toString());
                 toast("스트리밍 멈춤 실패 : \n" + idjiError.description().toString());
 
             }
@@ -1287,11 +1291,12 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         if (mNewDJI.length() > 1000)
             mNewDJI = mNewDJI.substring(500, 1000);
 
-        mNewDJI += "\n"+time+" : " + msg;
+        mNewDJI += "\n" + time + " : " + msg;
     }
 
     public void Log(String input) {
         Log.i(TAG, input);
+        logMessageDJI(input);
     }
 
     public void toast(String input) {
@@ -1339,7 +1344,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             Log.d(TAG, "External storage is not accessible.");
         }
     }
-
 
 
     /**
