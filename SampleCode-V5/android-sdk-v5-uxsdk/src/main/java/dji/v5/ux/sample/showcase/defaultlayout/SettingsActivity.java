@@ -23,8 +23,8 @@ public class SettingsActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = prefs.edit();
 
         String id = prefs.getString("pref_drone_id", "3");
-        String ip = prefs.getString("pref_gcs_ip", "127.0.0.1");
-        String port = prefs.getString("pref_telem_port", "10000");
+        String ip = prefs.getString("pref_gcs_ip", "223.130.163.167");
+        String port = prefs.getString("pref_telem_port", "6760");
         boolean use_external_gcs = prefs.getBoolean("pref_external_gcs", false);
         edt_id = findViewById(R.id.drone_id);
         edt_ip = findViewById(R.id.drone_gcs_ip);

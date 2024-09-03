@@ -100,6 +100,7 @@ import dji.v5.common.video.interfaces.IVideoChannel;
 import dji.v5.common.video.interfaces.VideoChannelStateChangeListener;
 import dji.v5.common.video.stream.PhysicalDevicePosition;
 import dji.v5.common.video.stream.StreamSource;
+import dji.v5.manager.KeyManager;
 import dji.v5.manager.datacenter.MediaDataCenter;
 import dji.v5.manager.datacenter.camera.CameraStreamManager;
 import dji.v5.manager.datacenter.livestream.LiveStreamManager;
@@ -232,6 +233,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private CameraStreamManager iCameraStreamManager;
     List<VideoSourceEntity> cameraList;
     private boolean ismapping = false;
+    private boolean isStreaming = false;
     //private DDMImageHandler mDDMImageHandler;
     //endregion
 
@@ -298,7 +300,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             @Override
             public void stopBtnClicked() {
-                Log( "Streaming Stop button clicked");
+                Log("Streaming Stop button clicked");
                 stopStream();
                 streamDialog.dismiss();
             }
@@ -369,7 +371,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity.this);
         id = prefs.getString("pref_drone_id", "19");
         streamAddress = "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream";
-        gcsip = prefs.getString("pref_gcs_ip", "127.0.0.1");
+        gcsip = prefs.getString("pref_gcs_ip", "223.130.163.167");
         gcsport = prefs.getString("pref_telem_port", "6760");
 
         mModel = new DroneModel(this);
@@ -438,7 +440,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         streamingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                iLiveStreamManager.setLiveStreamScaleType(ICameraStreamManager.ScaleType.CENTER_CROP);
                 streamDialog.show();
                 streamDialog.setStreamAddress(streamAddress);
                 streamDialog.getCameraGroup().removeAllViews();//카메라 리스트에 표출할 카메라 목록을 만들어주는거
@@ -806,8 +808,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            if (mainActivityWeakReference.get().mModel == null && mainActivityWeakReference.get().mModel.isTcpWorker) {
-
+            if (mainActivityWeakReference.get().mModel == null ) {//모델이 선언되어 있지 않거나 tcp워커가 동작하지 않으면
+                mainActivityWeakReference.get().Log("Drone Model is null");
             } else {
                 mainActivityWeakReference.get().mModel.tick();
             }
@@ -832,10 +834,10 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         }
 
         private void onRenewDatalinks() {
-//            Log.d(TAG, "onRenewDataLinks");
-//            createTelemetrySocket();
+            Log.i(TAG, "onRenewDataLinks");
+
             createTelemfetryTcpOutSocket();
-//            mainActivityWeakReference.get().sendRestartVideoService();
+
         }
 
         @Override
@@ -844,8 +846,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             Log.d("DDMTHREADS", "doInBackground()");
 
             try {
-                createTelemetrySocket();
-//                createTelemfetryTcpOutSocket();
+
                 mainActivityWeakReference.get().mMavlinkParser = new Parser();
 
                 GCSSenderTimerTask gcsSender = new GCSSenderTimerTask(mainActivityWeakReference);
@@ -875,7 +876,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                 mainActivityWeakReference.get().shouldConnect = true;
                                 mainActivityWeakReference.get().connectivityHasChanged = true;
                             }
-                        } else {
+                        }
+
+                        else {
                             if (mainActivityWeakReference.get().shouldConnect) {
                                 mainActivityWeakReference.get().shouldConnect = false;
                                 mainActivityWeakReference.get().connectivityHasChanged = true;
@@ -934,7 +937,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     }
                                 }
                             }
-                        } else {
+                        }
+                        else {
                             byte[] buf = new byte[1000];
                             DatagramPacket dp = new DatagramPacket(buf, buf.length);
                             mainActivityWeakReference.get().socket.receive(dp);
@@ -954,7 +958,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     mainActivityWeakReference.get().mReceiver.process(msg);
                                 }
                             }
-                        }
+                        }//UDP연결일 때
 
                     } catch (IOException e) {
                         //logMessageDJI("IOException: " + e.toString());
@@ -1030,20 +1034,11 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
 
 
-            Log.d(TAG, "gcsIPString :: Host-IP:" + gcsIPString + " HostPort:" + telemIPPort);
+            Log.d(TAG, "Tcpsocket gcsIPString :: Host-IP:" + gcsIPString + " HostPort:" + telemIPPort);
 
 
             try {
-                // TODO Server Socket.
-//                InetAddress gcsIp = InetAddress.getByName(gcsIPString);
-//                SocketAddress addr = new InetSocketAddress(gcsIp, telemIPPort);
-//                mainActivityWeakReference.get().mTcpServerSocket = new ServerSocket();
-                //                System.out.println("SO_REUSEADDR is enabled: " + this.myServerSocket.getReuseAddress());
-//                System.out.println("SO_REUSEADDR is enabled: " + this.myServerSocket.getReuseAddress());
-//                System.out.println("TCPLink :: is enabled IP :" + gcsIp.getHostAddress() + " port :" + this.myTcpConfiguration.get_localPort());
-//                this.myServerSocket.setReuseAddress(true);
-//                mainActivityWeakReference.get().mTcpServerSocket.bind(addr);
-//                mainActivityWeakReference.get().mTcpServerSocket.setSoTimeout(880000);
+                // TODO Server Socket
 
                 // TODO Client Socket.
                 mainActivityWeakReference.get().mTcpSocket = new Socket();
@@ -1052,50 +1047,34 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 mainActivityWeakReference.get().isa = (InetSocketAddress) mainActivityWeakReference.get().mTcpSocket.getRemoteSocketAddress();
                 mainActivityWeakReference.get().in = mainActivityWeakReference.get().mTcpSocket.getInputStream();
                 mainActivityWeakReference.get().bufferIn = new BufferedInputStream(mainActivityWeakReference.get().in);
-
+                mainActivityWeakReference.get().mModel.isTcpWorker = true;
                 Log.d(TAG, "mTcpSocket :: Success. Received-IP:" + mainActivityWeakReference.get().isa.getAddress() + " / Received-localport:" + mainActivityWeakReference.get().isa.getPort());
 
-                mainActivityWeakReference.get().mModel.isTcpWorker = true;
-                // exist Udp Out
-//                mainActivityWeakReference.get().socket = new DatagramSocket();
-//                mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);
-//                mainActivityWeakReference.get().socket.setSoTimeout(10);
-
-                mainActivityWeakReference.get().logMessageDJI("Starting GCS TCP Out telemetry link: " + gcsIPString + ":" + telemIPPort);
             } catch (SocketException e) {
-                Log.d(TAG, "createTelemetrySocket() - socket exception");
-
-
+                Log.d(TAG, "createTelemetryTcpSocket() - socket exception");
                 Log.d(TAG, "exception", e);
-                mainActivityWeakReference.get().logMessageDJI("Telemetry socket exception: " + gcsIPString + ":" + telemIPPort);
+                mainActivityWeakReference.get().logMessageDJI("Telemetry Tcp socket exception: " + gcsIPString + ":" + telemIPPort);
             } // TODO
             catch (UnknownHostException e) {
-                Log.d(TAG, "createTelemetrySocket() - unknown host exception");
-
+                Log.d(TAG, "createTelemetryTcpSocket() - unknown host exception");
                 Log.d(TAG, "exception", e);
-                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry host: " + gcsIPString + ":" + telemIPPort);
+                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry Tcp host: " + gcsIPString + ":" + telemIPPort);
             } // TODO
             catch (IOException e) {
-                Log.d(TAG, "createTelemetrySocket() - io socket exception  unknown host exception");
-
+                Log.d(TAG, "createTelemetryTcpSocket() - io socket exception  unknown host exception");
                 Log.d(TAG, "exception", e);
-                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry host: " + gcsIPString + ":" + telemIPPort);
+                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry Tcp host: " + gcsIPString + ":" + telemIPPort);
                 return;
             }
             if (mainActivityWeakReference.get() != null) {
-                // Set Socket On Drone Model Object
-//                mainActivityWeakReference.get().mModel.setSocket(mainActivityWeakReference.get().socket);
                 mainActivityWeakReference.get().mModel.setTcpSocket(mainActivityWeakReference.get().mTcpSocket);
-
                 if (mainActivityWeakReference.get().prefs.getBoolean("pref_secondary_telemetry_enabled", false)) {
-                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "127.0.0.1");
+                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "223.130.163.167");
                     int secondaryPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_port", "18990")));
                     try {
                         DatagramSocket secondarySocket = new DatagramSocket();
                         secondarySocket.connect(InetAddress.getByName(secondaryIP), secondaryPort);
                         mainActivityWeakReference.get().logMessageDJI("Starting secondary telemetry link: " + secondaryIP + ":" + secondaryPort);
-
-//                        mainActivityWeakReference.get().logMessageDJI(secondaryIP + ":" + secondaryPort);
                         mainActivityWeakReference.get().mModel.setSecondarySocket(secondarySocket);
                     } catch (SocketException | UnknownHostException e) {
                         e.printStackTrace();
@@ -1109,9 +1088,9 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
             String gcsIPString = "223.130.163.167";
 
-//            임시 주석처리
+
             if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
-                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "127.0.0.1");
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "223.130.163.167");
             int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
 
 
@@ -1119,23 +1098,23 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 mainActivityWeakReference.get().socket = new DatagramSocket();
                 mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);
                 mainActivityWeakReference.get().socket.setSoTimeout(10);
+                Log.d(TAG, "createTelemetry Datagram Socket() created");
 
-                mainActivityWeakReference.get().logMessageDJI("Starting GCS telemetry link: " + gcsIPString + ":" + telemIPPort);
             } catch (SocketException e) {
                 Log.d(TAG, "createTelemetrySocket() - socket exception");
                 Log.d(TAG, "exception", e);
-                mainActivityWeakReference.get().logMessageDJI("Telemetry socket exception: " + gcsIPString + ":" + telemIPPort);
+
             } // TODO
             catch (UnknownHostException e) {
                 Log.d(TAG, "createTelemetrySocket() - unknown host exception");
                 Log.d(TAG, "exception", e);
-                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry host: " + gcsIPString + ":" + telemIPPort);
+
             } // TODO
 
             if (mainActivityWeakReference.get() != null) {
                 mainActivityWeakReference.get().mModel.setSocket(mainActivityWeakReference.get().socket);
                 if (mainActivityWeakReference.get().prefs.getBoolean("pref_secondary_telemetry_enabled", false)) {
-                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "127.0.0.1");
+                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "223.130.163.167");
                     int secondaryPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_port", "18990")));
                     try {
                         DatagramSocket secondarySocket = new DatagramSocket();
@@ -1172,9 +1151,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                         mainActivityWeakReference.get().mModel.secondarySocket.close();
                     });
                     thread.start();
-
                 }
-
             }
         }
     }
@@ -1195,9 +1172,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     }
 
     private static class MqttImagesenderTimerTask extends TimerTask {
-
         private WeakReference<DefaultLayoutActivity> mainActivityWeakReference;
-
         MqttImagesenderTimerTask(WeakReference<DefaultLayoutActivity> mainActivityWeakReference) {
             this.mainActivityWeakReference = mainActivityWeakReference;
         }
@@ -1227,6 +1202,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 .setRtmpSettings(new RtmpSettings.Builder()
                         .setUrl(streamAddress)
                         .build()
+
                 ).build();
         iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
     }
@@ -1239,6 +1215,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 streamingButton.setText("now\nstreaming");
+                isStreaming = true;
                 toast("스트리밍 시작함");
                 Log("스트리밍 시작함");
             }
@@ -1252,22 +1229,27 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     }
 
     public void stopStream() {
-        iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
-            @Override
-            public void onSuccess() {//앱 실행여부 판단하는 플래그 하나 달아야 할듯.
-                streamingButton.setText("start\nstream");
-               Log("Streaming stopped successfully");
-                toast("스트리밍 멈춤");
+        if(isStreaming) {
+            iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onSuccess() {//앱 실행여부 판단하는 플래그 하나 달아야 할듯.
+                    streamingButton.setText("start\nstream");
+                    Log("Streaming stopped successfully");
+                    toast("스트리밍 멈춤");
 
-            }
+                }
 
-            @Override
-            public void onFailure(@NonNull IDJIError idjiError) {
-                Log("Streaming stopped failed "+idjiError.description().toString());
-                toast("스트리밍 멈춤 실패 : \n" + idjiError.description().toString());
+                @Override
+                public void onFailure(@NonNull IDJIError idjiError) {
+                    Log("Streaming stopped failed " + idjiError.description().toString());
+                    toast("스트리밍 멈춤 실패 : \n" + idjiError.description().toString());
 
-            }
-        });
+                }
+            });
+
+        }else{
+            toast("라이브 스트림 동작하고 있지 않음");
+        }
     }
 
     private void closeGCSCommunicator() {

@@ -1176,10 +1176,12 @@ public class DroneModel {
     }
 
     public void setSocket(DatagramSocket socket) {
+        parent.Log("DroneModel setSocket()");
         this.socket = socket;
     }
 
     public void setTcpSocket(Socket socket) {
+       parent.Log("setTCP Socket");
         this.mTcpSocket = socket;
         this.mIsa = (InetSocketAddress) socket.getRemoteSocketAddress();
         this.isTcpWorker = true;
@@ -1373,34 +1375,37 @@ public class DroneModel {
 
      */
     public void tick() { // Called ever 100ms...
-        ticks += 100;
-        try {
-            if (ticks % 100 == 0) {
-                send_attitude();
-                send_altitude();
-                send_vibration();
-                send_vfr_hud();
-            }
-            if (ticks % 200 == 0) {
-                send_global_position_int(); // We use this for the AI se need 5Hz...
-            }
-            if (ticks % 300 == 0) {
-                send_gps_raw_int();
-                send_radio_status();
-                send_rc_channels();
-            }
-            if (ticks % 1000 == 0) {
-                send_heartbeat();
-                send_sys_status();
-                send_power_status();
-                send_battery_status();
-            }
-            if (ticks % 5000 == 0) {
-                send_home_position();
-            }
 
-        } catch (Exception e) {
-            Log.d(TAG, "exception", e);
+        ticks += 100;
+        if(this.isTcpWorker) {
+            try {
+                if (ticks % 100 == 0) {
+                    send_attitude();
+                    send_altitude();
+                    send_vibration();
+                    send_vfr_hud();
+                }
+                if (ticks % 200 == 0) {
+                    send_global_position_int(); // We use this for the AI se need 5Hz...
+                }
+                if (ticks % 300 == 0) {
+                    send_gps_raw_int();
+                    send_radio_status();
+                    send_rc_channels();
+                }
+                if (ticks % 1000 == 0) {
+                    send_heartbeat();
+                    send_sys_status();
+                    send_power_status();
+                    send_battery_status();
+                }
+                if (ticks % 5000 == 0) {
+                    send_home_position();
+                }
+
+            } catch (Exception e) {
+                Log.d(TAG, "exception", e);
+            }
         }
     }
 
@@ -2045,6 +2050,9 @@ public class DroneModel {
             }
         });
     }
+
+
+
 
     public void listenRemoteControllerSticks() {
 

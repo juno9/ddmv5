@@ -1,5 +1,7 @@
 package dji.sampleV5.aircraft
 
+//
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -7,35 +9,42 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.method.ScrollingMovementMethod
+import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import dji.sampleV5.aircraft.models.BaseMainActivityVm
-import dji.sampleV5.aircraft.models.LoginVM
 import dji.sampleV5.aircraft.models.MSDKInfoVm
 import dji.sampleV5.aircraft.models.MSDKManagerVM
 import dji.sampleV5.aircraft.models.globalViewModels
-import dji.sampleV5.aircraft.util.Helper
 import dji.sampleV5.aircraft.util.ToastUtils
-import dji.v5.manager.interfaces.ILiveStreamManager
+import dji.sdk.keyvalue.key.KeyTools
+import dji.sdk.keyvalue.key.RemoteControllerKey
+import dji.v5.common.callback.CommonCallbacks
+import dji.v5.manager.KeyManager
 import dji.v5.utils.common.LogUtils
 import dji.v5.utils.common.PermissionUtil
 import dji.v5.utils.common.StringUtils
 import dji.v5.ux.sample.showcase.defaultlayout.DefaultLayoutActivity
 import dji.v5.ux.sample.showcase.defaultlayout.SettingsActivity
-import dji.v5.ux.sample.showcase.widgetlist.WidgetsActivity
+import dji.v5.ux.sample.util.DroneModel
 import io.reactivex.rxjava3.disposables.CompositeDisposable
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.default_layout_button
+import kotlinx.android.synthetic.main.activity_main.main2_button
+import kotlinx.android.synthetic.main.activity_main.testing_tool_button
+import kotlinx.android.synthetic.main.activity_main.text_view_is_debug
+import kotlinx.android.synthetic.main.activity_main.text_view_package_product_category
+import kotlinx.android.synthetic.main.activity_main.text_view_product_name
+import kotlinx.android.synthetic.main.activity_main.text_view_registered
+import kotlinx.android.synthetic.main.activity_main.text_view_version
+import kotlinx.android.synthetic.main.activity_main.view_base_info
+import kotlinx.android.synthetic.main.activity_main.widget_list_button
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_ddm_info
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_sdk_info
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_settings
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_start
-
-//
 import kotlinx.android.synthetic.main.activity_main_new_one.btn_testtools
-
 import kotlinx.android.synthetic.main.activity_main_new_one.ttv_ddm_info
 import kotlinx.android.synthetic.main.activity_main_new_one.ttv_sdk_info
 import java.io.BufferedReader
