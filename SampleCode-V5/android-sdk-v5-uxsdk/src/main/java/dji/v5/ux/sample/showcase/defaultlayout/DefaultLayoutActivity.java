@@ -57,12 +57,12 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentContainerView;
 import androidx.fragment.app.FragmentManager;
 
-import com.naver.maps.geometry.LatLng;
-import com.naver.maps.map.MapFragment;
-import com.naver.maps.map.NaverMap;
-import com.naver.maps.map.OnMapReadyCallback;
-import com.naver.maps.map.UiSettings;
-import com.naver.maps.map.overlay.Marker;
+import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.maps.MapView;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.maps.Style;
+
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -146,6 +146,13 @@ import dji.v5.ux.core.widget.setting.SettingWidget;
 import dji.v5.ux.core.widget.simulator.SimulatorIndicatorWidget;
 import dji.v5.ux.core.widget.systemstatus.SystemStatusWidget;
 import dji.v5.ux.gimbal.GimbalFineTuneWidget;
+import dji.v5.ux.map.MapWidget;
+import dji.v5.ux.mapkit.core.camera.DJICameraUpdate;
+import dji.v5.ux.mapkit.core.camera.DJICameraUpdateFactory;
+import dji.v5.ux.mapkit.core.maps.DJIMap;
+import dji.v5.ux.mapkit.core.maps.DJIUiSettings;
+import dji.v5.ux.mapkit.maplibre.map.MMapView;
+//import dji.v5.ux.mapkit.maplibre.map.MaplibreMapView;
 import dji.v5.ux.sample.util.DDMMqttClient;
 import dji.v5.ux.sample.util.DroneModel;
 import dji.v5.ux.sample.util.MAVLinkReceiver;
@@ -185,8 +192,11 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected CameraVisiblePanelWidget visualCameraPanel;
     protected FocalZoomWidget focalZoomWidget;
     protected SettingWidget settingWidget;
-    //    protected MapWidget mapWidget;
-    protected FragmentContainerView mapWidget;
+    // protected MapWidget mapWidget;
+    //    protected FragmentContainerView mapWidget;
+
+    MapView mapView;
+    MapboxMap mapboxMap;
     protected TopBarPanelWidget topBarPanel;
     protected ConstraintLayout fpvParentView;
     private DrawerLayout mDrawerLayout;
@@ -208,6 +218,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     DroneModel mModel;
     MAVLinkReceiver mReceiver;
     WpMissionManager wpMissionmanager;
+    String token = "sk.eyJ1IjoianVub2p1bm85MyIsImEiOiJjbTBtOXVpd3kwMGFhMmxzZ3hza3N5dTRkIn0.fy93yVoMgqd84LnJWFWiKA";
     public static boolean FLAG_TELEMETRY_ADDRESS_CHANGED = false;
     private Parser mMavlinkParser;
     private DatagramSocket socket;
@@ -234,6 +245,8 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     List<VideoSourceEntity> cameraList;
     private boolean ismapping = false;
     private boolean isStreaming = false;
+
+
     //private DDMImageHandler mDDMImageHandler;
     //endregion
 
@@ -243,7 +256,24 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Mapbox.getInstance(this, getString(R.string.access_token));
+
         setContentView(R.layout.uxsdk_activity_default_layout);
+        mapView = (MapView) findViewById(R.id.mapbox);
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(@NonNull MapboxMap mapboxMap) {
+                mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
+                    @Override
+                    public void onStyleLoaded(@NonNull Style style) {
+                        // Map is set up and the style has loaded. Now you can add data or make other map adjustments
+
+                    }
+                });
+
+            }
+        });
         fpvParentView = findViewById(R.id.fpv_holder);
         mDrawerLayout = findViewById(R.id.root_view);
         topBarPanel = findViewById(R.id.panel_top_bar);
@@ -266,7 +296,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         horizontalSituationIndicatorWidget = findViewById(R.id.widget_horizontal_situation_indicator);
         gimbalAdjustDone = findViewById(R.id.fpv_gimbal_ok_btn);
         gimbalFineTuneWidget = findViewById(R.id.setting_menu_gimbal_fine_tune);
-        mapWidget = findViewById(R.id.map_fragment);
+        //mapWidget = findViewById(R.id.widget_map);
         streamingButton = findViewById(R.id.btn_streaming);
         cameraControlsWidget.getExposureSettingsIndicatorWidget().setStateChangeResourceId(R.id.panel_camera_controls_exposure_settings);
         iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
@@ -275,6 +305,11 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         drowIcon = findViewById(R.id.imageView);
         cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
         imageDialog = new ImageDialog(this);
+
+
+
+
+
 
 
         imageDialog.setDialogListener(new ImageDialog.ImageDialogInterface() {
@@ -333,34 +368,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         secondaryFPVWidget.setSurfaceViewZOrderOnTop(true);
         secondaryFPVWidget.setSurfaceViewZOrderMediaOverlay(true);
 
-//        mapWidget.initAMap(map -> {
-//            // map.setOnMapClickListener(latLng -> onViewClick(mapWidget));
-//            DJIUiSettings uiSetting = map.getUiSettings();
-//            if (uiSetting != null) {
-//                uiSetting.setZoomControlsEnabled(false);//hide zoom widget
-//            }
-//        });
-//        mapWidget.onCreate(savedInstanceState);
-        FragmentManager fm = getSupportFragmentManager();
-        MapFragment mapFragment = (MapFragment) fm.findFragmentById(R.id.map_fragment);
-        if (mapFragment == null) {
-            mapFragment = MapFragment.newInstance();
-            fm.beginTransaction().add(R.id.map_fragment, mapFragment).commit();
-        }
-
-        mapFragment.getMapAsync(new OnMapReadyCallback() {//네이버 지도는 일단 달아는 두지만 나중에 손 봐야 함. Vworld나 다른 무료 지도들을 활용해야하기 때문
-            @Override
-            public void onMapReady(@NonNull NaverMap naverMap) {
-                UiSettings uiSettings = naverMap.getUiSettings();
-                uiSettings.setCompassEnabled(false);
-                uiSettings.setLocationButtonEnabled(false);
-                uiSettings.setZoomControlEnabled(false);
-                uiSettings.setLogoClickEnabled(false);
-                Marker marker = new Marker();//마커 생성
-                marker.setPosition(new LatLng(mModel.get_current_lat(), mModel.get_current_lon()));//마커
-            }
-        });
-
 
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
 
@@ -400,8 +407,102 @@ public class DefaultLayoutActivity extends AppCompatActivity {
         CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
 
 
+
+
+
     }
 
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mapView.onDestroy();
+        //  mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
+        MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
+        removeChannelStateListener();
+        DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
+        closeGCSCommunicator();
+
+
+        stopStream();
+        makelogfile(mNewDJI);
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
+        compositeDisposable = new CompositeDisposable();
+        compositeDisposable.add(systemStatusListPanelWidget.closeButtonPressed()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(pressed -> {
+                    if (pressed) {
+                        ViewExtensions.hide(systemStatusListPanelWidget);
+                    }
+                }));
+        compositeDisposable.add(simulatorControlWidget.getUIStateUpdates()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(simulatorControlWidgetState -> {
+                    if (simulatorControlWidgetState instanceof SimulatorControlWidget.UIState.VisibilityUpdated) {
+                        if (((SimulatorControlWidget.UIState.VisibilityUpdated) simulatorControlWidgetState).isVisible()) {
+                            hideOtherPanels(simulatorControlWidget);
+                        }
+                    }
+                }));
+        compositeDisposable.add(cameraSourceProcessor.toFlowable()
+                .observeOn(SchedulerProvider.io())
+                .throttleLast(500, TimeUnit.MILLISECONDS)
+                .subscribeOn(SchedulerProvider.io())
+                .subscribe(result -> runOnUiThread(() -> onCameraSourceUpdated(result.devicePosition, result.lensType)))
+        );
+        compositeDisposable.add(ObservableInMemoryKeyedStore.getInstance()
+                .addObserver(UXKeys.create(GlobalPreferenceKeys.GIMBAL_ADJUST_CLICKED))
+                .observeOn(SchedulerProvider.ui())
+                .subscribe(this::isGimableAdjustClicked));
+        ViewUtil.setKeepScreen(this, true);
+    }
+
+    @Override
+    protected void onPause() {
+        if (compositeDisposable != null) {
+            compositeDisposable.dispose();
+            compositeDisposable = null;
+        }
+        mapView.onPause();
+        super.onPause();
+        ViewUtil.setKeepScreen(this, false);
+    }
+
+    @Override
+    protected void onStart() {
+
+
+        super.onStart();
+        mapView.onStart();
+
+    }
+
+    @Override
+    protected void onStop() {
+
+
+        super.onStop();
+        mapView.onStop();
+
+    }
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        mapView.onSaveInstanceState(outState);
+    }
+
+    //endregion
     private void isGimableAdjustClicked(BroadcastValues broadcastValues) {
         if (mDrawerLayout.isDrawerOpen(GravityCompat.END)) {
             mDrawerLayout.closeDrawers();
@@ -552,69 +653,6 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     private void toggleRightDrawer() {
         mDrawerLayout.openDrawer(GravityCompat.END);
     }
-
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-//        mapWidget.onDestroy();
-        //  mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
-        MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
-        removeChannelStateListener();
-        DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
-        closeGCSCommunicator();
-
-
-        stopStream();
-        makelogfile(mNewDJI);
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-//        mapWidget.onResume();
-        compositeDisposable = new CompositeDisposable();
-        compositeDisposable.add(systemStatusListPanelWidget.closeButtonPressed()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(pressed -> {
-                    if (pressed) {
-                        ViewExtensions.hide(systemStatusListPanelWidget);
-                    }
-                }));
-        compositeDisposable.add(simulatorControlWidget.getUIStateUpdates()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(simulatorControlWidgetState -> {
-                    if (simulatorControlWidgetState instanceof SimulatorControlWidget.UIState.VisibilityUpdated) {
-                        if (((SimulatorControlWidget.UIState.VisibilityUpdated) simulatorControlWidgetState).isVisible()) {
-                            hideOtherPanels(simulatorControlWidget);
-                        }
-                    }
-                }));
-        compositeDisposable.add(cameraSourceProcessor.toFlowable()
-                .observeOn(SchedulerProvider.io())
-                .throttleLast(500, TimeUnit.MILLISECONDS)
-                .subscribeOn(SchedulerProvider.io())
-                .subscribe(result -> runOnUiThread(() -> onCameraSourceUpdated(result.devicePosition, result.lensType)))
-        );
-        compositeDisposable.add(ObservableInMemoryKeyedStore.getInstance()
-                .addObserver(UXKeys.create(GlobalPreferenceKeys.GIMBAL_ADJUST_CLICKED))
-                .observeOn(SchedulerProvider.ui())
-                .subscribe(this::isGimableAdjustClicked));
-        ViewUtil.setKeepScreen(this, true);
-    }
-
-    @Override
-    protected void onPause() {
-        if (compositeDisposable != null) {
-            compositeDisposable.dispose();
-            compositeDisposable = null;
-        }
-//        mapWidget.onPause();
-        super.onPause();
-        ViewUtil.setKeepScreen(this, false);
-    }
-    //endregion
 
     private void hideOtherPanels(@Nullable View widget) {
         View[] panels = {
@@ -808,7 +846,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            if (mainActivityWeakReference.get().mModel == null ) {//모델이 선언되어 있지 않거나 tcp워커가 동작하지 않으면
+            if (mainActivityWeakReference.get().mModel == null) {//모델이 선언되어 있지 않거나 tcp워커가 동작하지 않으면
                 mainActivityWeakReference.get().Log("Drone Model is null");
             } else {
                 mainActivityWeakReference.get().mModel.tick();
@@ -876,9 +914,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                 mainActivityWeakReference.get().shouldConnect = true;
                                 mainActivityWeakReference.get().connectivityHasChanged = true;
                             }
-                        }
-
-                        else {
+                        } else {
                             if (mainActivityWeakReference.get().shouldConnect) {
                                 mainActivityWeakReference.get().shouldConnect = false;
                                 mainActivityWeakReference.get().connectivityHasChanged = true;
@@ -937,8 +973,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                                     }
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             byte[] buf = new byte[1000];
                             DatagramPacket dp = new DatagramPacket(buf, buf.length);
                             mainActivityWeakReference.get().socket.receive(dp);
@@ -1173,6 +1208,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
 
     private static class MqttImagesenderTimerTask extends TimerTask {
         private WeakReference<DefaultLayoutActivity> mainActivityWeakReference;
+
         MqttImagesenderTimerTask(WeakReference<DefaultLayoutActivity> mainActivityWeakReference) {
             this.mainActivityWeakReference = mainActivityWeakReference;
         }
@@ -1229,7 +1265,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
     }
 
     public void stopStream() {
-        if(isStreaming) {
+        if (isStreaming) {
             iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
                 @Override
                 public void onSuccess() {//앱 실행여부 판단하는 플래그 하나 달아야 할듯.
@@ -1247,7 +1283,7 @@ public class DefaultLayoutActivity extends AppCompatActivity {
                 }
             });
 
-        }else{
+        } else {
             toast("라이브 스트림 동작하고 있지 않음");
         }
     }

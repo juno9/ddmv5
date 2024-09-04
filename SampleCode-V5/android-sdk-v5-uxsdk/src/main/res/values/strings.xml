@@ -21,7 +21,7 @@
   ~
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="uxsdk_app_name">DJIUXSDK Beta</string>
     <string name="uxsdk_app_yes">Yes</string>
     <string name="uxsdk_app_no">No</string>
@@ -1190,4 +1190,5 @@
     <string name="uxsdk_link_frequency_band_5_dot_7">5.7G</string>
     <string name="uxsdk_link_frequency_band_1_dot_4">840M&amp;1.4G</string>
 
+    <string name="access_token" translatable="false" tools:ignore="ResourceName">sk.eyJ1IjoianVub2p1bm85MyIsImEiOiJjbTBtOXVpd3kwMGFhMmxzZ3hza3N5dTRkIn0.fy93yVoMgqd84LnJWFWiKA</string>
 </resources>

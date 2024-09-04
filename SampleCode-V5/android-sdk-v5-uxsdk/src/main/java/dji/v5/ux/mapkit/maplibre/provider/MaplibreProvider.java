@@ -14,7 +14,7 @@ import dji.v5.ux.mapkit.core.providers.MapProvider;
 
 import dji.v5.ux.mapkit.maplibre.place.MaplibrePlaceDelegate;
 
-import dji.v5.ux.mapkit.maplibre.map.MaplibreMapView;
+
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 
@@ -40,7 +40,7 @@ public class MaplibreProvider extends MapProvider {
         options.attributionGravity(Gravity.BOTTOM | Gravity.RIGHT);
         options.logoGravity(Gravity.BOTTOM | Gravity.RIGHT);
         options.logoMargins(new int[]{0, 0, 75, 12});
-        mapView = new MaplibreMapView(context, options);
+
 
         return mapView;
     }

@@ -18,9 +18,9 @@ ext {
     deps.okhttp3 = 'com.squareup.okhttp3:okhttp:3.14.9'
     deps.leakcanary = 'com.squareup.leakcanary:leakcanary-android:2.11'
     deps.rx2Java = 'io.reactivex.rxjava2:rxjava:2.2.4' // 目前在CSDK升级模块中使用rxjava2
-    deps.maplibreAnotation = 'org.maplibre.gl:android-plugin-annotation-v9:1.0.0'
-    deps.maplibreTurf = 'org.maplibre.gl:android-sdk-turf:5.9.1'
-    deps.maplibreSdk = 'org.maplibre.gl:android-sdk:9.4.2'
+//    deps.maplibreAnotation = 'org.maplibre.gl:android-plugin-annotation-v9:1.0.0'
+//    deps.maplibreTurf = 'org.maplibre.gl:android-sdk-turf:5.9.1'
+//    deps.maplibreSdk = 'org.maplibre.gl:android-sdk:9.4.2'
     deps.lottie = 'com.airbnb.android:lottie:3.3.1'//RTK扫描页中使用，用于实现动画效果
     deps.cardview = 'androidx.cardview:cardview:1.0.0'//PopoverView中使用
     deps.material = 'com.google.android.material:material:1.0.0'//AvoidanceShortcutWidget使用
@@ -93,8 +93,10 @@ ext {
     deps.aspectj_rt = 'org.aspectj:aspectjrt:1.9.6'
     deps.aspectj_weaver = 'org.aspectj:aspectjweaver:1.9.6'
     //navermaps
-    deps.navermap= 'com.naver.maps:map-sdk:3.18.0'
+
 
     deps.mattv3='org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+
+
 
 }

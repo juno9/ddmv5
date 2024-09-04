@@ -51,12 +51,12 @@ dependencies {
     implementation deps.mikepenzIconicsCore
     implementation deps.mikepenzIonicons
     implementation deps.material
-    implementation deps.navermap
+    implementation ('com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.0')
     implementation deps.mattv3
     
-    api deps.maplibreAnotation
-    api deps.maplibreTurf
-    api deps.maplibreSdk
+//    api deps.maplibreAnotation
+//    api deps.maplibreTurf
+//    api deps.maplibreSdk
     api deps.amap3DMap
     api deps.amapSearch
 

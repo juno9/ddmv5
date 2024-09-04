@@ -1,11 +1,12 @@
 package dji.v5.ux.mapkit.maplibre.map
 
 import android.content.Context
+import com.mapbox.mapboxsdk.maps.MapView
 import dji.v5.ux.mapkit.core.Mapkit
 import dji.v5.ux.mapkit.core.maps.DJIMap
 import dji.v5.ux.mapkit.core.maps.DJIMapView
 import dji.v5.ux.mapkit.core.maps.DJIMapViewInternal
-import com.mapbox.mapboxsdk.maps.MapView
+//import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions
 import com.mapbox.mapboxsdk.maps.Style
 
@@ -25,7 +26,7 @@ class MaplibreMapView @JvmOverloads constructor(
             var mapLoadedOnce = false
             val finishLoadingMapListener = OnDidFinishLoadingMapListener {
                 mapLoadedOnce = true
-                callback?.onDJIMapReady(MaplibreMapDelegateKt(mapboxMap, context, this))
+
             }
             val startLoadingMapListener = OnWillStartLoadingMapListener {
                 if (mapLoadedOnce && styleLoaded) {

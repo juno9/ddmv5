@@ -74,7 +74,7 @@ import dji.v5.ux.mapkit.core.models.annotations.DJIMarkerOptions;
 import dji.v5.ux.mapkit.core.models.annotations.DJIPolyline;
 import dji.v5.ux.mapkit.core.models.annotations.DJIPolylineOptions;
 import dji.v5.ux.mapkit.gmap.provider.GoogleProvider;
-import dji.v5.ux.mapkit.maplibre.provider.MaplibreProvider;
+
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -886,7 +886,7 @@ public class MapWidget extends ConstraintLayoutWidget<Object> implements View.On
      */
     public void initMapLibreMap(@NonNull String mapboxAccessToken, @Nullable final OnMapReadyListener listener) {
         Mapkit.mapboxAccessToken(mapboxAccessToken);
-        mapView = new MaplibreProvider().dispatchMapViewRequest(getContext(), null);
+        //mapView = new MaplibreProvider().dispatchMapViewRequest(getContext(), null);
         addView((ViewGroup) mapView, 0);
         mapView.getDJIMapAsync(map -> {
             this.map = map;

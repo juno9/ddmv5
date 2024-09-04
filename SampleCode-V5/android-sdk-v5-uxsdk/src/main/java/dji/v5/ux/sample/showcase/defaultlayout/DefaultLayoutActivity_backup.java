@@ -24,40 +24,95 @@
 package dji.v5.ux.sample.showcase.defaultlayout;
 
 import static dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode.QUICK_SHOT;
+import static dji.v5.ux.MAVLink.enums.MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
+import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentContainerView;
+import androidx.fragment.app.FragmentManager;
 
-import com.naver.maps.map.NaverMap;
-import com.naver.maps.map.UiSettings;
 
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
+import dji.sdk.keyvalue.value.airlink.VideoSourceEntity;
 import dji.sdk.keyvalue.value.common.CameraLensType;
 import dji.sdk.keyvalue.value.common.ComponentIndexType;
 import dji.sdk.keyvalue.value.flightassistant.ActiveTrackMode;
+import dji.v5.common.callback.CommonCallbacks;
+import dji.v5.common.error.IDJIError;
 import dji.v5.common.video.channel.VideoChannelState;
 import dji.v5.common.video.channel.VideoChannelType;
 import dji.v5.common.video.interfaces.IVideoChannel;
 import dji.v5.common.video.interfaces.VideoChannelStateChangeListener;
 import dji.v5.common.video.stream.PhysicalDevicePosition;
 import dji.v5.common.video.stream.StreamSource;
+import dji.v5.manager.KeyManager;
 import dji.v5.manager.datacenter.MediaDataCenter;
+import dji.v5.manager.datacenter.camera.CameraStreamManager;
+import dji.v5.manager.datacenter.livestream.LiveStreamManager;
+import dji.v5.manager.datacenter.livestream.LiveStreamSettings;
+import dji.v5.manager.datacenter.livestream.LiveStreamType;
+import dji.v5.manager.datacenter.livestream.LiveVideoBitrateMode;
+import dji.v5.manager.datacenter.livestream.StreamQuality;
+import dji.v5.manager.datacenter.livestream.settings.RtmpSettings;
+import dji.v5.manager.interfaces.ICameraStreamManager;
+import dji.v5.manager.interfaces.IMediaManager;
 import dji.v5.network.DJINetworkManager;
 import dji.v5.network.IDJINetworkStatusListener;
 import dji.v5.utils.common.JsonUtil;
 import dji.v5.utils.common.LogUtils;
+import dji.v5.ux.MAVLink.MAVLinkPacket;
+import dji.v5.ux.MAVLink.Messages.MAVLinkMessage;
+import dji.v5.ux.MAVLink.Parser;
 import dji.v5.ux.R;
 import dji.v5.ux.accessory.RTKStartServiceHelper;
 import dji.v5.ux.cameracore.widget.autoexposurelock.AutoExposureLockWidget;
@@ -86,8 +141,14 @@ import dji.v5.ux.core.widget.setting.SettingWidget;
 import dji.v5.ux.core.widget.simulator.SimulatorIndicatorWidget;
 import dji.v5.ux.core.widget.systemstatus.SystemStatusWidget;
 import dji.v5.ux.gimbal.GimbalFineTuneWidget;
-import dji.v5.ux.map.MapWidget;
-import dji.v5.ux.mapkit.core.maps.DJIUiSettings;
+import dji.v5.ux.sample.util.DDMMqttClient;
+import dji.v5.ux.sample.util.DroneModel;
+import dji.v5.ux.sample.util.MAVLinkReceiver;
+import dji.v5.ux.sample.util.MAVParam;
+import dji.v5.ux.sample.util.StreamDialog;
+import dji.v5.ux.sample.util.ImageDialog;
+import dji.v5.ux.sample.util.WpMissionManager;
+import dji.v5.ux.sample.util.video.DDMImageHandler;
 import dji.v5.ux.training.simulatorcontrol.SimulatorControlWidget;
 import dji.v5.ux.visualcamera.CameraNDVIPanelWidget;
 import dji.v5.ux.visualcamera.CameraVisiblePanelWidget;
@@ -102,7 +163,6 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
 
     //region Fields
     private final String TAG = LogUtils.getTag(this);
-
     protected FPVWidget primaryFpvWidget;
     protected FPVInteractionWidget fpvInteractionWidget;
     protected FPVWidget secondaryFPVWidget;
@@ -120,17 +180,15 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
     protected CameraVisiblePanelWidget visualCameraPanel;
     protected FocalZoomWidget focalZoomWidget;
     protected SettingWidget settingWidget;
-    protected MapWidget mapWidget;
+    //    protected MapWidget mapWidget;
+    protected FragmentContainerView mapWidget;
     protected TopBarPanelWidget topBarPanel;
     protected ConstraintLayout fpvParentView;
     private DrawerLayout mDrawerLayout;
     private TextView gimbalAdjustDone;
+    private ImageView drowIcon;
     private GimbalFineTuneWidget gimbalFineTuneWidget;
-
-    private ActiveTrackMode mode=QUICK_SHOT;
-
-
-
+    private ActiveTrackMode mode = QUICK_SHOT;
     private CompositeDisposable compositeDisposable;
     private final DataProcessor<CameraSource> cameraSourceProcessor = DataProcessor.create(new CameraSource(PhysicalDevicePosition.UNKNOWN,
             CameraLensType.UNKNOWN));
@@ -142,7 +200,36 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
             RTKStartServiceHelper.INSTANCE.startRtkService(false);
         }
     };
+    DroneModel mModel;
+    MAVLinkReceiver mReceiver;
+    WpMissionManager wpMissionmanager;
+    public static boolean FLAG_TELEMETRY_ADDRESS_CHANGED = false;
+    private Parser mMavlinkParser;
+    private DatagramSocket socket;
+    private Socket mTcpSocket;
+    private InetSocketAddress isa;
+    private InputStream in;
+    private BufferedInputStream bufferIn;
+    private GCSCommunicatorAsyncTask mGCSCommunicator;
+    private final int GCS_TIMEOUT_mSEC = 2000;
+    private boolean shouldConnect = false;
+    private boolean connectivityHasChanged = false;
+    private SharedPreferences prefs;
+    private String mNewInbound = "";
+    private String mNewDJI = "";
+    String id, gcsip, gcsport;
+    private Button streamingButton;
+    StreamDialog streamDialog;
+    ImageDialog imageDialog;
+    String streamAddress;
+    DDMImageHandler ddmImageHandler;
 
+    private LiveStreamManager iLiveStreamManager;
+    private CameraStreamManager iCameraStreamManager;
+    List<VideoSourceEntity> cameraList;
+    private boolean ismapping = false;
+    private boolean isStreaming = false;
+    //private DDMImageHandler mDDMImageHandler;
     //endregion
 
     //region Lifecycle
@@ -150,9 +237,8 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.uxsdk_activity_default_layout);
-
-
         fpvParentView = findViewById(R.id.fpv_holder);
         mDrawerLayout = findViewById(R.id.root_view);
         topBarPanel = findViewById(R.id.panel_top_bar);
@@ -176,7 +262,60 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
         gimbalAdjustDone = findViewById(R.id.fpv_gimbal_ok_btn);
         gimbalFineTuneWidget = findViewById(R.id.setting_menu_gimbal_fine_tune);
         mapWidget = findViewById(R.id.map_fragment);
+        streamingButton = findViewById(R.id.btn_streaming);
         cameraControlsWidget.getExposureSettingsIndicatorWidget().setStateChangeResourceId(R.id.panel_camera_controls_exposure_settings);
+        iCameraStreamManager = (CameraStreamManager) MediaDataCenter.getInstance().getCameraStreamManager();
+        iLiveStreamManager = (LiveStreamManager) MediaDataCenter.getInstance().getLiveStreamManager();
+        streamDialog = new StreamDialog(this);
+        drowIcon = findViewById(R.id.imageView);
+        cameraList = iCameraStreamManager.getAvailableCameraSourceList();//사용 가능한 카메라 목록을 가져옴
+        imageDialog = new ImageDialog(this);
+
+
+        imageDialog.setDialogListener(new ImageDialog.ImageDialogInterface() {
+            @Override
+            public void startBtnClicked() {
+                ismapping = true;
+            }
+
+            @Override
+            public void stopBtnClicked() {
+                ismapping = false;
+            }
+        });
+        streamDialog.setDialogListener(new StreamDialog.StreamDialogInterface() {
+            @Override
+            public void startBtnClicked() {
+                Log("Streaming Strat button clicked");
+                //이거 눌리면 ip값이랑 카메라값, 품질값 받아와서 실행해야 함.
+                setRTMP();
+                startLiveStream();
+                streamDialog.dismiss();
+            }
+
+            @Override
+            public void stopBtnClicked() {
+                Log("Streaming Stop button clicked");
+                stopStream();
+                streamDialog.dismiss();
+            }
+
+            @Override
+            public void etdStreamAddress() {
+
+            }
+
+
+        });
+
+        streamDialog.setOnEditTextChangedListener(new StreamDialog.OnEditTextChangedListener() {
+            @Override
+            public void onEditTextChanged(String address) {
+                streamAddress = address;
+                prefs.edit().putString("pref_stream_address", address).apply();
+                prefs.edit().apply();
+            }
+        });
 
         initClickListener();
         MediaDataCenter.getInstance().getVideoStreamManager().addStreamSourcesListener(sources -> runOnUiThread(() -> updateFPVWidgetSource(sources)));
@@ -184,22 +323,63 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
             cameraSourceProcessor.onNext(new CameraSource(devicePosition, lensType));
         });
 
+
         //小surfaceView放置在顶部，避免被大的遮挡
         secondaryFPVWidget.setSurfaceViewZOrderOnTop(true);
         secondaryFPVWidget.setSurfaceViewZOrderMediaOverlay(true);
 
-        mapWidget.initAMap(map -> {
-            // map.setOnMapClickListener(latLng -> onViewClick(mapWidget));
-            DJIUiSettings uiSetting = map.getUiSettings();
-            if (uiSetting != null) {
-                uiSetting.setZoomControlsEnabled(false);//hide zoom widget
-            }
-        });
-        mapWidget.onCreate(savedInstanceState);
+//        mapWidget.initAMap(map -> {
+//            // map.setOnMapClickListener(latLng -> onViewClick(mapWidget));
+//            DJIUiSettings uiSetting = map.getUiSettings();
+//            if (uiSetting != null) {
+//                uiSetting.setZoomControlsEnabled(false);//hide zoom widget
+//            }
+//        });
+//        mapWidget.onCreate(savedInstanceState);
+
+
+
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
 
         //实现RTK监测网络，并自动重连机制
         DJINetworkManager.getInstance().addNetworkStatusListener(networkStatusListener);
+
+
+        prefs = PreferenceManager.getDefaultSharedPreferences(DefaultLayoutActivity_backup.this);
+        id = prefs.getString("pref_drone_id", "19");
+        streamAddress = "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream";
+        gcsip = prefs.getString("pref_gcs_ip", "223.130.163.167");
+        gcsport = prefs.getString("pref_telem_port", "6760");
+        // 반드시 주석 해제 해야
+        //mModel = new DroneModel(this);
+        mModel.setSystemId(Integer.parseInt(id));
+
+
+        drowIcon.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                imageDialog.show();
+            }
+        });
+
+        String streamAddress = prefs.getString("pref_stream_address", "rtmp://drowdev.skymap.kr:1935/live/drone" + id + ".stream");
+        prefs.edit().putString("pref_stream_address", streamAddress).apply();
+        prefs.edit().apply();
+        // 반드시 주석 해제 해야
+       // mReceiver = new MAVLinkReceiver(this, mModel);
+        mModel.createdir();
+
+        // 반드시 주석 해제 해야
+//        wpMissionmanager = new WpMissionManager(mReceiver, mModel, this);
+
+
+        mReceiver.setWpMissionManager(wpMissionmanager);
+
+        mGCSCommunicator = new GCSCommunicatorAsyncTask(this);
+        mGCSCommunicator.execute();
+
+        ddmImageHandler = new DDMImageHandler(this, mModel, primaryFpvWidget.getWidth(), primaryFpvWidget.getHeight());
+        CameraStreamManager.getInstance().addFrameListener(ComponentIndexType.LEFT_OR_MAIN, ICameraStreamManager.FrameFormat.YUV420_888, ddmImageHandler);
 
 
     }
@@ -239,6 +419,116 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
             }
 
         });
+        streamingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                iLiveStreamManager.setLiveStreamScaleType(ICameraStreamManager.ScaleType.CENTER_CROP);
+                streamDialog.show();
+                streamDialog.setStreamAddress(streamAddress);
+                streamDialog.getCameraGroup().removeAllViews();//카메라 리스트에 표출할 카메라 목록을 만들어주는거
+                for (int i = 0; i < cameraList.size(); i++) {
+                    RadioButton radioButton = new RadioButton(DefaultLayoutActivity_backup.this);
+                    radioButton.setText(cameraList.get(i).getPosition().toString());
+                    streamDialog.getCameraGroup().addView(radioButton);
+                    if (i == 0) {
+                        radioButton.setChecked(true);
+                    }
+                }
+                streamDialog.getCameraGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {//카메라 목록중에 하나 선택했을때 어떻게 동작할지 정의하는 곳
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked tag :" + radioButton.getText());
+                                iLiveStreamManager.setCameraIndex(cameraList.get(i).getPosition());
+                                Log("checked position :" + cameraList.get(i).getPosition().toString());
+
+
+                            }
+                        }
+                    }
+                });
+                streamDialog.getQualityGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked tag :" + radioButton.getTag());
+                                switch (radioButton.getTag().toString()) {
+                                    case "1": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.SD);
+                                        break;
+                                    }
+                                    case "2": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.HD);
+                                        break;
+                                    }
+                                    case "3": {
+                                        iLiveStreamManager.setLiveStreamQuality(StreamQuality.FULL_HD);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+
+                    }
+                });
+                streamDialog.getBitrateGroup().setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                        for (int i = 0; i < group.getChildCount(); i++) {
+                            RadioButton radioButton = (RadioButton) group.getChildAt(i);
+                            if (radioButton.getId() == checkedId) {
+                                Log("RadioGroup :" + group + "  checked ID :" + checkedId + "  checked text:" + radioButton.getText());
+                                switch (radioButton.getText().toString()) {
+                                    case "MANUAL": {
+                                        streamDialog.getsbBitrate().setVisibility(View.VISIBLE);
+                                        streamDialog.getTvBitrate().setVisibility(View.VISIBLE);
+                                        iLiveStreamManager.setLiveVideoBitrateMode(LiveVideoBitrateMode.MANUAL);
+
+                                        streamDialog.getsbBitrate().setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                                            @Override
+                                            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                                                int bitrate = (int) (8 * 1024 * 2048 * (0.1 + 0.9 * streamDialog.getsbBitrate().getProgress() / (double) streamDialog.getsbBitrate().getMax()));
+                                                streamDialog.getTvBitrate().setText("Bitrate : " + bitrate + " kbps");
+                                                Log("bitrate : " + bitrate);
+
+                                            }
+
+                                            @Override
+                                            public void onStartTrackingTouch(SeekBar seekBar) {
+
+                                            }
+
+                                            @Override
+                                            public void onStopTrackingTouch(SeekBar seekBar) {
+                                                int bitrate = (int) (8 * 1024 * 2048 * (0.1 + 0.9 * streamDialog.getsbBitrate().getProgress() / (double) streamDialog.getsbBitrate().getMax()));
+                                                iLiveStreamManager.setLiveVideoBitrate(bitrate);
+
+                                            }
+                                        });
+                                        break;
+                                    }
+                                    case "AUTO": {
+                                        streamDialog.getsbBitrate().setVisibility(View.GONE);
+                                        streamDialog.getTvBitrate().setVisibility(View.GONE);
+                                        iLiveStreamManager.setLiveVideoBitrateMode(LiveVideoBitrateMode.AUTO);
+                                        break;
+                                    }
+                                }
+
+
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+
     }
 
     private void toggleRightDrawer() {
@@ -249,17 +539,23 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mapWidget.onDestroy();
+//        mapWidget.onDestroy();
+        //  mModel.deletemediafilefromCamera(MediaDataCenter.getInstance().getMediaManager().getMediaFileListData().getData());
         MediaDataCenter.getInstance().getVideoStreamManager().clearAllStreamSourcesListeners();
         removeChannelStateListener();
         DJINetworkManager.getInstance().removeNetworkStatusListener(networkStatusListener);
+        closeGCSCommunicator();
+
+
+        stopStream();
+        makelogfile(mNewDJI);
 
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mapWidget.onResume();
+//        mapWidget.onResume();
         compositeDisposable = new CompositeDisposable();
         compositeDisposable.add(systemStatusListPanelWidget.closeButtonPressed()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -296,7 +592,7 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
             compositeDisposable.dispose();
             compositeDisposable = null;
         }
-        mapWidget.onPause();
+//        mapWidget.onPause();
         super.onPause();
         ViewUtil.setKeepScreen(this, false);
     }
@@ -480,4 +776,566 @@ public class DefaultLayoutActivity_backup extends AppCompatActivity {
             super.onBackPressed();
         }
     }
+
+
+    //added
+    private static class GCSSenderTimerTask extends TimerTask {
+
+        private WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference;
+
+        GCSSenderTimerTask(WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference) {
+            this.mainActivityWeakReference = mainActivityWeakReference;
+
+        }
+
+        @Override
+        public void run() {
+            if (mainActivityWeakReference.get().mModel == null ) {//모델이 선언되어 있지 않거나 tcp워커가 동작하지 않으면
+                mainActivityWeakReference.get().Log("Drone Model is null");
+            } else {
+                mainActivityWeakReference.get().mModel.tick();
+            }
+        }
+    }
+
+    private static class GCSCommunicatorAsyncTask extends AsyncTask<Integer, Integer, Integer> {
+
+        private static final String TAG = GCSSenderTimerTask.class.getSimpleName();
+        boolean request_renew_datalinks = true;
+        private Timer timer;
+        private WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference;
+
+        GCSCommunicatorAsyncTask(DefaultLayoutActivity_backup mainActivity) {
+            mainActivityWeakReference = new WeakReference<>(mainActivity);
+        }
+
+        void renewDatalinks() {
+//            Log.d(TAG, "renewDataLinks");
+            request_renew_datalinks = true;
+            FLAG_TELEMETRY_ADDRESS_CHANGED = false;
+        }
+
+        private void onRenewDatalinks() {
+            Log.i(TAG, "onRenewDataLinks");
+
+            createTelemfetryTcpOutSocket();
+
+        }
+
+        @Override
+
+        protected Integer doInBackground(Integer... ints2) {
+            Log.d("DDMTHREADS", "doInBackground()");
+
+            try {
+
+                mainActivityWeakReference.get().mMavlinkParser = new Parser();
+
+                GCSSenderTimerTask gcsSender = new GCSSenderTimerTask(mainActivityWeakReference);
+                timer = new Timer(true);
+                timer.scheduleAtFixedRate(gcsSender, 0, 100);
+
+
+//                CameraImageSenderTimerTask cameraImageSenderTimerTask = new CameraImageSenderTimerTask(mainActivityWeakReference);
+//                timer = new Timer(true);
+//                timer.scheduleAtFixedRate(cameraImageSenderTimerTask, 0, 5000); // 2000
+
+//mqtt 이미지 전송
+//                MqttImagesenderTimerTask mqttImagesenderTimerTask = new MqttImagesenderTimerTask(mainActivityWeakReference);
+//                timer = new Timer(true);
+//                timer.scheduleAtFixedRate(mqttImagesenderTimerTask, 0, 2000); // 2000
+
+
+                while (!isCancelled()) {
+                    // Listen for packets
+                    try {
+                        if (request_renew_datalinks) {//최초 실행시 이 조건문이 작동
+                            request_renew_datalinks = false;
+                            onRenewDatalinks();
+                        }
+                        if (System.currentTimeMillis() - mainActivityWeakReference.get().mReceiver.getTimestampLastGCSHeartbeat() <= mainActivityWeakReference.get().GCS_TIMEOUT_mSEC) {
+                            if (!mainActivityWeakReference.get().shouldConnect) {
+                                mainActivityWeakReference.get().shouldConnect = true;
+                                mainActivityWeakReference.get().connectivityHasChanged = true;
+                            }
+                        }
+
+                        else {
+                            if (mainActivityWeakReference.get().shouldConnect) {
+                                mainActivityWeakReference.get().shouldConnect = false;
+                                mainActivityWeakReference.get().connectivityHasChanged = true;
+                            }
+                        }
+
+                        if (mainActivityWeakReference.get().connectivityHasChanged) {
+                            if (mainActivityWeakReference.get().shouldConnect) {
+                                final Drawable connectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_baseline_connected_24px, null);//연결 완료 UI 표시
+                                mainActivityWeakReference.get().runOnUiThread(() -> {
+                                    ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
+                                    imageView.setBackground(connectedDrawable);
+                                    imageView.invalidate();
+                                });
+                                //라이브스트림 매니저는 setquality, setbitrate등의 메소드를 제공
+                            } else {
+                                final Drawable disconnectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_outline_disconnected_24px, null);
+
+                                mainActivityWeakReference.get().runOnUiThread(() -> {
+                                    ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
+                                    imageView.setBackground(disconnectedDrawable);
+                                    imageView.invalidate();
+                                });
+                            }
+                            mainActivityWeakReference.get().connectivityHasChanged = false;
+                        }
+
+                        if (mainActivityWeakReference.get().mModel.isTcpWorker) {
+                            // TODO TCP Read.
+
+                            int bytesAvailable = 0; // mainActivityWeakReference.get().in.available();
+//                            int bytesAvailable = mainActivityWeakReference.get().bufferIn.available();
+                            if (bytesAvailable == 0) {
+//                                byte[] input = new byte[bytesAvailable];
+                                byte[] input = new byte[16 * 1024];
+
+                                int bytesRead = mainActivityWeakReference.get().bufferIn.read(input);
+
+
+                                for (int i = 0; i < bytesRead; i++) {
+                                    MAVLinkPacket packet = mainActivityWeakReference.get().mMavlinkParser.mavlink_parse_char(input[i] & 0xff);
+
+                                    if (packet != null) {
+
+                                        MAVLinkMessage msg = packet.unpack();
+                                        if (mainActivityWeakReference.get().prefs.getBoolean("pref_log_mavlink", false))
+                                            mainActivityWeakReference.get().logMessageFromGCS(msg.toString());
+                                        mainActivityWeakReference.get().mReceiver.process(msg);
+//                                        AsyncReadContextThread asyncContextThread = new AsyncReadContextThread(this.tcpWorkerLink
+//                                                , packet
+//                                                , addressTable);
+
+//                                        //log.info("[--AsyncReadContextThread--] :: accept tcp Data...");
+//                                        Thread thread = new Thread(asyncContextThread, "AsyncReadContextThread");
+//                                        thread.start(); // async
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            byte[] buf = new byte[1000];
+                            DatagramPacket dp = new DatagramPacket(buf, buf.length);
+                            mainActivityWeakReference.get().socket.receive(dp);
+
+                            byte[] bytes = dp.getData();
+                            int[] ints = new int[bytes.length];
+                            for (int i = 0; i < bytes.length; i++)
+                                ints[i] = bytes[i] & 0xff;
+
+                            for (int i = 0; i < bytes.length; i++) {
+                                MAVLinkPacket packet = mainActivityWeakReference.get().mMavlinkParser.mavlink_parse_char(ints[i]);
+
+                                if (packet != null) {
+                                    MAVLinkMessage msg = packet.unpack();
+                                    if (mainActivityWeakReference.get().prefs.getBoolean("pref_log_mavlink", false))
+                                        mainActivityWeakReference.get().logMessageFromGCS(msg.toString());
+                                    mainActivityWeakReference.get().mReceiver.process(msg);
+                                }
+                            }
+                        }//UDP연결일 때
+
+                    } catch (IOException e) {
+                        //logMessageDJI("IOException: " + e.toString());
+                    }
+                }
+
+            } catch (Exception e) {
+                Log.d(TAG, "exception", e);
+            } finally {
+                if (mainActivityWeakReference.get().socket.isConnected()) {
+                    mainActivityWeakReference.get().socket.disconnect();
+                }
+                if (timer != null) {
+                    timer.cancel();
+                }
+                if (mainActivityWeakReference.get().mTcpSocket != null) {
+                    try {
+                        if (mainActivityWeakReference.get().mTcpSocket.isConnected()) {
+                            mainActivityWeakReference.get().mTcpSocket.close();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    mainActivityWeakReference.get().mModel.isTcpWorker = false;
+                }
+//                Log.d("RDTHREADS", "doInBackground() complete");
+
+            }
+            return 0;
+        }
+
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            /*
+            TODO Not sure what to do here...
+             */
+            if (mainActivityWeakReference.get() == null || mainActivityWeakReference.get().isFinishing())
+                return;
+
+            mainActivityWeakReference.clear();
+
+        }
+
+        @Override
+        protected void onCancelled(Integer result) {
+            super.onCancelled();
+
+            close();
+
+            final Drawable disconnectedDrawable = mainActivityWeakReference.get().getResources().getDrawable(R.drawable.ic_outline_disconnected_24px, null);
+
+            mainActivityWeakReference.get().runOnUiThread(() -> {
+                ImageView imageView = mainActivityWeakReference.get().findViewById(R.id.gcs_conn);
+                imageView.setBackground(disconnectedDrawable);
+                imageView.invalidate();
+            });
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+
+        }
+
+        private void createTelemfetryTcpOutSocket() {// GCS와 연결하는 부분
+            close();
+
+            String gcsIPString = "223.130.163.167";
+
+            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false)) {
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "223.130.163.167");
+            }
+            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
+
+
+            Log.d(TAG, "Tcpsocket gcsIPString :: Host-IP:" + gcsIPString + " HostPort:" + telemIPPort);
+
+
+            try {
+                // TODO Server Socket
+
+                // TODO Client Socket.
+                mainActivityWeakReference.get().mTcpSocket = new Socket();
+                mainActivityWeakReference.get().mTcpSocket.setSoTimeout(5000);
+                mainActivityWeakReference.get().mTcpSocket.connect(new InetSocketAddress(gcsIPString, telemIPPort));
+                mainActivityWeakReference.get().isa = (InetSocketAddress) mainActivityWeakReference.get().mTcpSocket.getRemoteSocketAddress();
+                mainActivityWeakReference.get().in = mainActivityWeakReference.get().mTcpSocket.getInputStream();
+                mainActivityWeakReference.get().bufferIn = new BufferedInputStream(mainActivityWeakReference.get().in);
+                mainActivityWeakReference.get().mModel.isTcpWorker = true;
+                Log.d(TAG, "mTcpSocket :: Success. Received-IP:" + mainActivityWeakReference.get().isa.getAddress() + " / Received-localport:" + mainActivityWeakReference.get().isa.getPort());
+
+            } catch (SocketException e) {
+                Log.d(TAG, "createTelemetryTcpSocket() - socket exception");
+                Log.d(TAG, "exception", e);
+                mainActivityWeakReference.get().logMessageDJI("Telemetry Tcp socket exception: " + gcsIPString + ":" + telemIPPort);
+            } // TODO
+            catch (UnknownHostException e) {
+                Log.d(TAG, "createTelemetryTcpSocket() - unknown host exception");
+                Log.d(TAG, "exception", e);
+                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry Tcp host: " + gcsIPString + ":" + telemIPPort);
+            } // TODO
+            catch (IOException e) {
+                Log.d(TAG, "createTelemetryTcpSocket() - io socket exception  unknown host exception");
+                Log.d(TAG, "exception", e);
+                mainActivityWeakReference.get().logMessageDJI("Unknown telemetry Tcp host: " + gcsIPString + ":" + telemIPPort);
+                return;
+            }
+            if (mainActivityWeakReference.get() != null) {
+                mainActivityWeakReference.get().mModel.setTcpSocket(mainActivityWeakReference.get().mTcpSocket);
+                if (mainActivityWeakReference.get().prefs.getBoolean("pref_secondary_telemetry_enabled", false)) {
+                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "223.130.163.167");
+                    int secondaryPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_port", "18990")));
+                    try {
+                        DatagramSocket secondarySocket = new DatagramSocket();
+                        secondarySocket.connect(InetAddress.getByName(secondaryIP), secondaryPort);
+                        mainActivityWeakReference.get().logMessageDJI("Starting secondary telemetry link: " + secondaryIP + ":" + secondaryPort);
+                        mainActivityWeakReference.get().mModel.setSecondarySocket(secondarySocket);
+                    } catch (SocketException | UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        private void createTelemetrySocket() {
+            close();
+
+            String gcsIPString = "223.130.163.167";
+
+
+            if (mainActivityWeakReference.get().prefs.getBoolean("pref_external_gcs", false))
+                gcsIPString = mainActivityWeakReference.get().prefs.getString("pref_gcs_ip", "223.130.163.167");
+            int telemIPPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_telem_port", "14550")));
+
+
+            try {
+                mainActivityWeakReference.get().socket = new DatagramSocket();
+                mainActivityWeakReference.get().socket.connect(InetAddress.getByName(gcsIPString), telemIPPort);
+                mainActivityWeakReference.get().socket.setSoTimeout(10);
+                Log.d(TAG, "createTelemetry Datagram Socket() created");
+
+            } catch (SocketException e) {
+                Log.d(TAG, "createTelemetrySocket() - socket exception");
+                Log.d(TAG, "exception", e);
+
+            } // TODO
+            catch (UnknownHostException e) {
+                Log.d(TAG, "createTelemetrySocket() - unknown host exception");
+                Log.d(TAG, "exception", e);
+
+            } // TODO
+
+            if (mainActivityWeakReference.get() != null) {
+                mainActivityWeakReference.get().mModel.setSocket(mainActivityWeakReference.get().socket);
+                if (mainActivityWeakReference.get().prefs.getBoolean("pref_secondary_telemetry_enabled", false)) {
+                    String secondaryIP = mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_ip", "223.130.163.167");
+                    int secondaryPort = Integer.parseInt(Objects.requireNonNull(mainActivityWeakReference.get().prefs.getString("pref_secondary_telemetry_port", "18990")));
+                    try {
+                        DatagramSocket secondarySocket = new DatagramSocket();
+                        secondarySocket.connect(InetAddress.getByName(secondaryIP), secondaryPort);
+                        mainActivityWeakReference.get().logMessageDJI("Starting secondary telemetry link: " + secondaryIP + ":" + secondaryPort);
+
+//                        mainActivityWeakReference.get().logMessageDJI(secondaryIP + ":" + secondaryPort);
+                        mainActivityWeakReference.get().mModel.setSecondarySocket(secondarySocket);
+                    } catch (SocketException | UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        protected void close() {
+            if (mainActivityWeakReference.get().socket != null) {
+                mainActivityWeakReference.get().socket.disconnect();
+                mainActivityWeakReference.get().socket.close();
+            }
+            if (mainActivityWeakReference.get().mTcpSocket != null) {
+//                mainActivityWeakReference.get().mTcpSocket.disconnect();
+                try {
+                    mainActivityWeakReference.get().mTcpSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mainActivityWeakReference.get().mModel.isTcpWorker = false;
+            }
+            if (mainActivityWeakReference.get().mModel != null) {
+                if (mainActivityWeakReference.get().mModel.secondarySocket != null) {
+                    Thread thread = new Thread(() -> {
+                        mainActivityWeakReference.get().mModel.secondarySocket.disconnect();
+                        mainActivityWeakReference.get().mModel.secondarySocket.close();
+                    });
+                    thread.start();
+                }
+            }
+        }
+    }
+
+    private static class CameraImageSenderTimerTask extends TimerTask {
+
+        private WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference;
+
+        CameraImageSenderTimerTask(WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference) {
+            this.mainActivityWeakReference = mainActivityWeakReference;
+        }
+
+        @Override
+        public void run() {
+            if (mainActivityWeakReference.get().ddmImageHandler != null)
+                mainActivityWeakReference.get().ddmImageHandler.tick();
+        }
+    }
+
+    private static class MqttImagesenderTimerTask extends TimerTask {
+        private WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference;
+        MqttImagesenderTimerTask(WeakReference<DefaultLayoutActivity_backup> mainActivityWeakReference) {
+            this.mainActivityWeakReference = mainActivityWeakReference;
+        }
+
+        @Override
+        public void run() {
+            mainActivityWeakReference.get().mModel.initmediamanager();
+
+            //mqtt메시지 보내는 코드 정상동작 확인 240711자
+            Thread mqttTestThread = new Thread(() -> {
+                try {
+                    if (mainActivityWeakReference.get().ismapping) {
+                        mainActivityWeakReference.get().mModel.setGimbalRotation((double) 0.0);//짐벌 각도 0도 세팅
+                        mainActivityWeakReference.get().mModel.takePhoto();
+                    }
+                } catch (Exception e) {
+                    Log.i(mainActivityWeakReference.get().TAG, "exception : " + e.toString());
+                }
+            });
+            mqttTestThread.start();
+        }
+    }
+
+    public void setRTMP() {
+        LiveStreamSettings rtmpSettings = new LiveStreamSettings.Builder()//라이브스트림세팅 객체 생성, 영상 프로토콜, URL정보가 입력되어 있음
+                .setLiveStreamType(LiveStreamType.RTMP)
+                .setRtmpSettings(new RtmpSettings.Builder()
+                        .setUrl(streamAddress)
+                        .build()
+
+                ).build();
+        iLiveStreamManager.setLiveStreamSettings(rtmpSettings);
+    }
+
+    public void startLiveStream() {
+        //RTMP 스트리밍 기능 추가
+
+
+        iLiveStreamManager.startStream(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onSuccess() {
+                streamingButton.setText("now\nstreaming");
+                isStreaming = true;
+                toast("스트리밍 시작함");
+                Log("스트리밍 시작함");
+            }
+
+            @Override
+            public void onFailure(@NonNull IDJIError idjiError) {
+                toast("스트리밍 못함 : \n" + idjiError.description().toString());
+                Log("스트리밍 못함");
+            }
+        });
+    }
+
+    public void stopStream() {
+        if(isStreaming) {
+            iLiveStreamManager.stopStream(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onSuccess() {//앱 실행여부 판단하는 플래그 하나 달아야 할듯.
+                    streamingButton.setText("start\nstream");
+                    Log("Streaming stopped successfully");
+                    toast("스트리밍 멈춤");
+
+                }
+
+                @Override
+                public void onFailure(@NonNull IDJIError idjiError) {
+                    Log("Streaming stopped failed " + idjiError.description().toString());
+                    toast("스트리밍 멈춤 실패 : \n" + idjiError.description().toString());
+
+                }
+            });
+
+        }else{
+            toast("라이브 스트림 동작하고 있지 않음");
+        }
+    }
+
+    private void closeGCSCommunicator() {
+        if (mGCSCommunicator != null) {
+            mGCSCommunicator.cancel(true);
+            mGCSCommunicator = null;
+            Log("closeGCSCommunicator");
+        }
+    }
+
+    public void logMessageFromGCS(String msg) {
+        Log(msg);
+    }
+
+    public void logMessageDJI(String msg) {
+        Log.d(TAG, msg);
+        Date date = new Date(System.currentTimeMillis());
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddhhmmss");
+        String time = format.format(date);
+
+        if (mNewDJI.length() > 1000)
+            mNewDJI = mNewDJI.substring(500, 1000);
+
+        mNewDJI += "\n" + time + " : " + msg;
+    }
+
+    public void Log(String input) {
+        Log.i(TAG, input);
+        logMessageDJI(input);
+    }
+
+    public void toast(String input) {
+        Toast.makeText(this, input, Toast.LENGTH_SHORT).show();
+    }
+
+    public void makelogfile(String input) {
+
+        Date date = new Date(System.currentTimeMillis());
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddhhmmss");
+        String time = format.format(date);
+
+        if (isExternalStorageWritable()) {
+            // External storage is readable and writable
+
+            File appDirectory = new File(Environment.getExternalStorageDirectory() + "/DDMV5");
+            File logDirectory = new File(appDirectory + "/logs");
+
+            // Create appDirectory if it doesn't exist
+            if (!appDirectory.exists()) {
+                appDirectory.mkdirs();
+            }
+
+            // Create logDirectory if it doesn't exist
+            if (!logDirectory.exists()) {
+                logDirectory.mkdirs();
+            }
+
+            // Create the log file
+            File logFile = new File(logDirectory, "logcat_" + time + ".txt");
+            Log.d(TAG, "*** onCreate() - logFile :: " + logFile);
+
+            // Write the input string to the log file
+            try (FileWriter writer = new FileWriter(logFile)) {
+                writer.write(input);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        } else if (isExternalStorageReadable()) {
+            // External storage is only readable
+            Log.d(TAG, "External storage is only readable. Cannot write the log file.");
+        } else {
+            // External storage is not accessible
+            Log.d(TAG, "External storage is not accessible.");
+        }
+    }
+
+
+    /**
+     * 외부저장소 read/write 가능 여부 확인
+     *
+     * @return
+     */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+
+    /**
+     * 외부저장소 read 가능 여부 확인
+     *
+     * @return
+     */
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
 }

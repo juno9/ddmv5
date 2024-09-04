@@ -13,7 +13,7 @@ import dji.v5.ux.mapkit.core.maps.DJIMap.MapType
 import dji.v5.ux.mapkit.core.models.DJICameraPosition
 import dji.v5.ux.mapkit.core.models.annotations.*
 import dji.v5.ux.mapkit.core.utils.DJIMapkitLog
-import dji.v5.ux.mapkit.maplibre.annotations.MaplibreCircle
+
 import dji.v5.ux.mapkit.maplibre.annotations.MaplibreMarker
 import dji.v5.ux.mapkit.maplibre.annotations.MaplibrePolygon
 import dji.v5.ux.mapkit.maplibre.annotations.MaplibrePolyline
@@ -72,7 +72,7 @@ class MaplibreMapDelegateKt(private val mapboxMap: MapboxMap,
     private var currentSelectedMarker: MaplibreMarker? = null
 
     private val markerSet = HashSet<MaplibreMarker>()
-    private val circleSet = HashSet<MaplibreCircle>()
+
     private val polygonSet = HashSet<MaplibrePolygon>()
     private val polylineSet = HashSet<MaplibrePolyline>()
     private val sortedLayerWithZindex = TreeSet<LayerWithZindex>()
@@ -125,7 +125,7 @@ class MaplibreMapDelegateKt(private val mapboxMap: MapboxMap,
 
     override fun setMapType(type: MapType, listener: OnMapTypeLoadedListener?) {
         markerSet.forEach { it.clearMarker() }
-        circleSet.forEach { it.clearCircle() }
+
         polygonSet.forEach { it.clear() }
         polylineSet.forEach { it.clear() }
         mapboxMap.setStyle(fromMapType(type)) { restoreResources(it, listener) }
@@ -133,7 +133,7 @@ class MaplibreMapDelegateKt(private val mapboxMap: MapboxMap,
 
     private fun restoreResources(style: Style, listener: OnMapTypeLoadedListener?) {
         markerSet.forEach { it.restore() }
-        circleSet.forEach { it.restore() }
+
         polygonSet.forEach { it.restore() }
         polylineSet.forEach { it.restore() }
         sortedLayerWithZindex.forEach {
@@ -182,23 +182,14 @@ class MaplibreMapDelegateKt(private val mapboxMap: MapboxMap,
         polygonSet.addAndLog(it)
     }
 
-    override fun addSingleCircle(options: DJICircleOptions): DJICircle {
-        return MaplibreCircle(mapboxMap, options, { zindex, circle ->
-            val removeCircle = circleSet.removeAndLog(circle)
-            val removeLayer = removeLayer(circle.circleLayer, zindex)
-            val removeBorder = removeLayer(circle.borderLayer, zindex)
-            removeCircle && removeLayer && removeBorder
-        }) { zindex, circle ->
-            addCircleAtZIndex(zindex, circle)
-        }.also {
-            addCircleAtZIndex(options.zIndex.toInt(), it)
-        }
+    override fun addSingleCircle(options: DJICircleOptions?): DJICircle? {
+        TODO("Not yet implemented")
     }
 
-    private fun addCircleAtZIndex(zindex: Int, circle: MaplibreCircle) {
-        addLayer(circle.circleLayer, zindex)
-        addLayer(circle.borderLayer, zindex)
-        circleSet.addAndLog(circle)
+
+    private fun addCircleAtZIndex(zindex: Int) {
+
+
     }
 
     override fun getUiSettings() = MUiSettings(mapboxMap.uiSettings)
@@ -218,10 +209,7 @@ class MaplibreMapDelegateKt(private val mapboxMap: MapboxMap,
             forEach { it.clearMarker() }
             clear()
         }
-        circleSet.apply {
-            forEach { it.clearCircle() }
-            clear()
-        }
+
         polygonSet.apply {
             forEach { it.clear() }
             clear()
